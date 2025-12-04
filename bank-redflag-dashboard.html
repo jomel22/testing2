@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Reputation Risk Monitor - Red Flag Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .tab-btn.active {
+            color: white;
+            border-color: #ef4444;
+            background: rgba(51, 65, 85, 0.5);
+        }
+        .category-btn.active {
+            background: white;
+            color: #1f2937;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        .backdrop-blur {
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <!-- Header -->
+    <header class="bg-slate-800/50 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-r from-red-500 to-orange-500 p-2 rounded-xl">
+                        <i class="fas fa-shield-alt text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Bank Reputation Risk Monitor</h1>
+                        <p class="text-xs text-slate-400">Red Flag Detection & Response System</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <select id="timeRange" class="bg-slate-700 text-white text-sm rounded-lg px-3 py-2 border border-slate-600">
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d" selected>Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                        <option value="90d">Last 90 Days</option>
+                    </select>
+                    <button class="bg-slate-700 p-2 rounded-lg border border-slate-600 hover:bg-slate-600 relative">
+                        <i class="fas fa-bell text-white"></i>
+                        <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">5</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-slate-800/30 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex gap-1">
+                <button onclick="switchTab('dashboard')" class="tab-btn active flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all" data-tab="dashboard">
+                    <i class="fas fa-chart-bar"></i>
+                    Dashboard
+                </button>
+                <button onclick="switchTab('redflags')" class="tab-btn flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all" data-tab="redflags">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Red Flag List
+                </button>
+                <button onclick="switchTab('flowchart')" class="tab-btn flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all" data-tab="flowchart">
+                    <i class="fas fa-sitemap"></i>
+                    System Flow
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="space-y-6">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-exclamation-triangle text-red-400"></i>
+                        <span class="text-xs text-slate-400">Total</span>
+                    </div>
+                    <p class="text-2xl font-bold text-white">158</p>
+                    <p class="text-xs text-slate-400">Active Red Flags</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-red-500/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-exclamation-circle text-red-500"></i>
+                        <span class="text-xs text-red-400">Critical</span>
+                    </div>
+                    <p class="text-2xl font-bold text-red-400">33</p>
+                    <p class="text-xs text-slate-400">Need Immediate Action</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-check-circle text-green-400"></i>
+                        <span class="text-xs text-slate-400">Resolved</span>
+                    </div>
+                    <p class="text-2xl font-bold text-green-400">12</p>
+                    <p class="text-xs text-slate-400">Resolved Today</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-clock text-yellow-400"></i>
+                        <span class="text-xs text-slate-400">Pending</span>
+                    </div>
+                    <p class="text-2xl font-bold text-yellow-400">47</p>
+                    <p class="text-xs text-slate-400">Awaiting Review</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-chart-line text-blue-400"></i>
+                        <span class="text-xs text-slate-400">Avg Time</span>
+                    </div>
+                    <p class="text-2xl font-bold text-blue-400">4.2 hrs</p>
+                    <p class="text-xs text-slate-400">Resolution Time</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-shield-alt text-emerald-400"></i>
+                        <span class="text-xs text-slate-400">Score</span>
+                    </div>
+                    <p class="text-2xl font-bold text-emerald-400">72/100</p>
+                    <p class="text-xs text-slate-400">Reputation Score</p>
+                </div>
+            </div>
+
+            <!-- Category Cards & Recent Alerts -->
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Category Overview -->
+                <div class="lg:col-span-2 grid sm:grid-cols-2 gap-4" id="category-cards">
+                    <!-- Cards will be populated by JavaScript -->
+                </div>
+
+                <!-- Recent Alerts -->
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl border border-slate-700 overflow-hidden">
+                    <div class="p-4 border-b border-slate-700">
+                        <h3 class="font-semibold text-white flex items-center gap-2">
+                            <i class="fas fa-bell text-red-400"></i>
+                            Recent Alerts
+                        </h3>
+                    </div>
+                    <div class="divide-y divide-slate-700" id="recent-alerts">
+                        <!-- Alerts will be populated by JavaScript -->
+                    </div>
+                    <div class="p-3 border-t border-slate-700">
+                        <button class="text-sm text-blue-400 hover:text-blue-300 w-full text-center">
+                            View All Alerts →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Red Flags List View -->
+        <div id="redflags-view" class="space-y-6 hidden">
+            <!-- Category Filter -->
+            <div class="flex flex-wrap gap-2" id="category-filters">
+                <!-- Filters will be populated by JavaScript -->
+            </div>
+
+            <!-- Red Flags Grid -->
+            <div class="grid gap-6" id="redflags-grid">
+                <!-- Red flags will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Flow Chart View -->
+        <div id="flowchart-view" class="hidden">
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 text-center">Red Flag Detection & Response System Flow</h3>
+                
+                <!-- Main Flow -->
+                <div class="space-y-4">
+                    <!-- Layer 1: Data Sources -->
+                    <div class="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-slate-600 mb-3 text-center">DATA SOURCES</h4>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-database text-slate-600 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Core Banking</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-credit-card text-slate-600 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Card Systems</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-globe text-slate-600 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Online Banking</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-phone text-slate-600 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Call Center</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-building text-slate-600 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Branch Systems</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-server text-slate-600 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">ATM Network</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-envelope text-slate-600 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Email Systems</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-comments text-slate-600 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Social Media</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Layer 2: Detection Engine -->
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-blue-600 mb-3 text-center">DETECTION ENGINE</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="bg-white rounded-lg p-3 shadow-sm text-center">
+                                <i class="fas fa-chart-line text-blue-500 text-lg mb-1"></i>
+                                <span class="text-xs font-medium text-gray-700 block">Real-time Monitoring</span>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 shadow-sm text-center">
+                                <i class="fas fa-search text-blue-500 text-lg mb-1"></i>
+                                <span class="text-xs font-medium text-gray-700 block">Pattern Analysis</span>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 shadow-sm text-center">
+                                <i class="fas fa-bolt text-blue-500 text-lg mb-1"></i>
+                                <span class="text-xs font-medium text-gray-700 block">AI/ML Models</span>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 shadow-sm text-center">
+                                <i class="fas fa-crosshairs text-blue-500 text-lg mb-1"></i>
+                                <span class="text-xs font-medium text-gray-700 block">Rule Engine</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Layer 3: Alert Classification -->
+                    <div class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-amber-600 mb-3 text-center">ALERT CLASSIFICATION</h4>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <div class="flex items-center gap-2 bg-red-100 px-4 py-2 rounded-full">
+                                <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                                <span class="text-sm font-semibold text-red-700">Critical</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-orange-100 px-4 py-2 rounded-full">
+                                <span class="w-3 h-3 bg-orange-500 rounded-full"></span>
+                                <span class="text-sm font-semibold text-orange-700">High</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-yellow-100 px-4 py-2 rounded-full">
+                                <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                                <span class="text-sm font-semibold text-yellow-700">Medium</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-blue-100 px-4 py-2 rounded-full">
+                                <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
+                                <span class="text-sm font-semibold text-blue-700">Low</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Layer 4: Response Actions -->
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="bg-gradient-to-b from-red-50 to-white rounded-xl p-4 border border-red-200">
+                            <h4 class="text-sm font-semibold text-red-600 mb-3 text-center">IMMEDIATE RESPONSE</h4>
+                            <ul class="text-xs text-gray-600 space-y-2">
+                                <li class="flex items-center gap-2"><i class="fas fa-check-circle text-red-500 text-xs"></i>Auto-block suspicious accounts</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-check-circle text-red-500 text-xs"></i>Freeze high-risk transactions</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-check-circle text-red-500 text-xs"></i>Revoke compromised credentials</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-check-circle text-red-500 text-xs"></i>Isolate affected systems</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gradient-to-b from-purple-50 to-white rounded-xl p-4 border border-purple-200">
+                            <h4 class="text-sm font-semibold text-purple-600 mb-3 text-center">NOTIFICATION</h4>
+                            <ul class="text-xs text-gray-600 space-y-2">
+                                <li class="flex items-center gap-2"><i class="fas fa-bell text-purple-500 text-xs"></i>Alert Security Operations</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-bell text-purple-500 text-xs"></i>Notify Risk Management</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-bell text-purple-500 text-xs"></i>Escalate to Leadership</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-bell text-purple-500 text-xs"></i>Inform Compliance Team</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gradient-to-b from-green-50 to-white rounded-xl p-4 border border-green-200">
+                            <h4 class="text-sm font-semibold text-green-600 mb-3 text-center">DOCUMENTATION</h4>
+                            <ul class="text-xs text-gray-600 space-y-2">
+                                <li class="flex items-center gap-2"><i class="fas fa-file-alt text-green-500 text-xs"></i>Log incident details</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-file-alt text-green-500 text-xs"></i>Capture evidence</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-file-alt text-green-500 text-xs"></i>Create audit trail</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-file-alt text-green-500 text-xs"></i>Generate reports</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Layer 5: Investigation & Resolution -->
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-indigo-600 mb-3 text-center">INVESTIGATION & RESOLUTION</h4>
+                        <div class="flex flex-wrap justify-center items-center gap-2">
+                            <div class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Assign</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Investigate</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-violet-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Analyze</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-fuchsia-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Remediate</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-pink-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Verify</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Close</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Layer 6: Continuous Improvement -->
+                    <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-emerald-600 mb-3 text-center">CONTINUOUS IMPROVEMENT</h4>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <div class="bg-white rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-sync-alt text-emerald-500"></i>
+                                <span class="text-xs font-medium">Update Detection Rules</span>
+                            </div>
+                            <div class="bg-white rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-chart-line text-emerald-500"></i>
+                                <span class="text-xs font-medium">Enhance ML Models</span>
+                            </div>
+                            <div class="bg-white rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-users text-emerald-500"></i>
+                                <span class="text-xs font-medium">Staff Training</span>
+                            </div>
+                            <div class="bg-white rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-chart-bar text-emerald-500"></i>
+                                <span class="text-xs font-medium">KPI Review</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Escalation Matrix -->
+                <div class="mt-8">
+                    <h4 class="font-bold text-gray-800 mb-4">Escalation Matrix</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 rounded-tl-lg">Severity</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Example Incidents</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Response Time</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 rounded-tr-lg">Escalate To</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b">
+                                    <td class="px-4 py-3">
+                                        <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium text-xs">Critical</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600">Active breach, unauthorized data access, intruder in secure zone</td>
+                                    <td class="px-4 py-3 text-gray-600">Immediate (15 min)</td>
+                                    <td class="px-4 py-3 text-gray-600">CISO, Legal, Executive Team</td>
+                                </tr>
+                                <tr class="border-b">
+                                    <td class="px-4 py-3">
+                                        <span class="px-3 py-1 bg-orange-100 text-orange-800 rounded-full font-medium text-xs">High</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600">Multiple failed logins, tailgating confirmed, credential sharing</td>
+                                    <td class="px-4 py-3 text-gray-600">1 Hour</td>
+                                    <td class="px-4 py-3 text-gray-600">Security Manager, IT Manager</td>
+                                </tr>
+                                <tr class="border-b">
+                                    <td class="px-4 py-3">
+                                        <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium text-xs">Medium</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600">Unusual login time, door held open, policy violation</td>
+                                    <td class="px-4 py-3 text-gray-600">4 Hours</td>
+                                    <td class="px-4 py-3 text-gray-600">Security Team Lead</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3">
+                                        <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-xs">Low</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600">Single failed login, minor badge anomaly</td>
+                                    <td class="px-4 py-3 text-gray-600">24 Hours</td>
+                                    <td class="px-4 py-3 text-gray-600">SOC Analyst</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800/30 border-t border-slate-700 mt-8">
+        <div class="max-w-7xl mx-auto px-4 py-4 text-center text-sm text-slate-500">
+            Bank Reputation Risk Monitor • Red Flag Detection & Response System • Regular review and updates recommended
+        </div>
+    </footer>
+
+    <script>
+        // Red Flag Categories Data
+        const redFlagCategories = [
+            {
+                id: 'financial-crime',
+                name: 'Financial Crime',
+                icon: 'fa-money-bill-wave',
+                color: 'red',
+                count: 23,
+                critical: 5,
+                flags: [
+                    { name: 'Money Laundering Indicators', severity: 'critical', description: 'Unusual transaction patterns, structuring, layering activities' },
+                    { name: 'Terrorist Financing', severity: 'critical', description: 'Transactions linked to sanctioned entities or high-risk regions' },
+                    { name: 'Internal Fraud', severity: 'critical', description: 'Employee manipulation of accounts, unauthorized transfers' },
+                    { name: 'External Fraud', severity: 'high', description: 'Phishing, account takeover, synthetic identity fraud' },
+                    { name: 'Embezzlement', severity: 'critical', description: 'Misappropriation of funds by employees' },
+                    { name: 'Check Fraud', severity: 'medium', description: 'Counterfeit, altered, or forged checks' },
+                    { name: 'Wire Transfer Fraud', severity: 'high', description: 'Unauthorized or suspicious wire transfers' },
+                    { name: 'Credit Card Fraud', severity: 'high', description: 'Unauthorized card usage, skimming, cloning' },
+                ]
+            },
+            {
+                id: 'compliance',
+                name: 'Compliance & Regulatory',
+                icon: 'fa-balance-scale',
+                color: 'orange',
+                count: 18,
+                critical: 3,
+                flags: [
+                    { name: 'KYC Violations', severity: 'critical', description: 'Inadequate customer identification and verification' },
+                    { name: 'AML Policy Breaches', severity: 'critical', description: 'Failure to detect or report suspicious activities' },
+                    { name: 'Sanctions Violations', severity: 'critical', description: 'Transactions with sanctioned countries/individuals' },
+                    { name: 'Data Privacy Breaches', severity: 'high', description: 'GDPR, CCPA, or local privacy law violations' },
+                    { name: 'Regulatory Reporting Failures', severity: 'high', description: 'Late or inaccurate regulatory submissions' },
+                    { name: 'Consumer Protection Violations', severity: 'medium', description: 'Unfair, deceptive, or abusive practices' },
+                    { name: 'Capital Adequacy Issues', severity: 'high', description: 'Basel III/IV compliance failures' },
+                    { name: 'Audit Findings', severity: 'medium', description: 'Unresolved internal/external audit issues' },
+                ]
+            },
+            {
+                id: 'cybersecurity',
+                name: 'Cybersecurity',
+                icon: 'fa-shield-virus',
+                color: 'purple',
+                count: 31,
+                critical: 8,
+                flags: [
+                    { name: 'Data Breach', severity: 'critical', description: 'Unauthorized access to customer data' },
+                    { name: 'Ransomware Attack', severity: 'critical', description: 'Systems compromised by ransomware' },
+                    { name: 'Phishing Campaigns', severity: 'high', description: 'Targeted attacks on employees or customers' },
+                    { name: 'DDoS Attacks', severity: 'high', description: 'Service disruption from denial of service' },
+                    { name: 'Unauthorized System Access', severity: 'critical', description: 'Intrusion detection alerts' },
+                    { name: 'Malware Detection', severity: 'high', description: 'Malicious software found in systems' },
+                    { name: 'API Security Vulnerabilities', severity: 'medium', description: 'Exposed or insecure API endpoints' },
+                    { name: 'Third-Party Vendor Breaches', severity: 'high', description: 'Security incidents at partner organizations' },
+                ]
+            },
+            {
+                id: 'operational',
+                name: 'Operational Risk',
+                icon: 'fa-server',
+                color: 'blue',
+                count: 15,
+                critical: 2,
+                flags: [
+                    { name: 'System Outages', severity: 'critical', description: 'Core banking system unavailability' },
+                    { name: 'Transaction Processing Errors', severity: 'high', description: 'Failed or incorrect transactions' },
+                    { name: 'ATM/Branch Failures', severity: 'medium', description: 'Service disruption at customer touchpoints' },
+                    { name: 'Backup System Failures', severity: 'high', description: 'Disaster recovery system issues' },
+                    { name: 'Integration Failures', severity: 'medium', description: 'Problems with connected systems' },
+                    { name: 'Process Breakdowns', severity: 'medium', description: 'Failures in standard operating procedures' },
+                    { name: 'Vendor Service Disruption', severity: 'medium', description: 'Third-party service provider issues' },
+                    { name: 'Data Quality Issues', severity: 'high', description: 'Inaccurate or incomplete data' },
+                ]
+            },
+            {
+                id: 'employee',
+                name: 'Employee Conduct',
+                icon: 'fa-user-times',
+                color: 'yellow',
+                count: 12,
+                critical: 4,
+                flags: [
+                    { name: 'Insider Trading', severity: 'critical', description: 'Trading on non-public information' },
+                    { name: 'Bribery & Corruption', severity: 'critical', description: 'Accepting or offering bribes' },
+                    { name: 'Conflict of Interest', severity: 'high', description: 'Undisclosed personal interests' },
+                    { name: 'Unauthorized Access', severity: 'critical', description: 'Accessing systems/data without authorization' },
+                    { name: 'Tailgating/Piggybacking', severity: 'medium', description: 'Physical security bypass' },
+                    { name: 'Password Sharing', severity: 'high', description: 'Credential misuse' },
+                    { name: 'Policy Violations', severity: 'medium', description: 'Breaking internal policies' },
+                    { name: 'Harassment/Misconduct', severity: 'high', description: 'Workplace misconduct reports' },
+                ]
+            },
+            {
+                id: 'customer',
+                name: 'Customer Experience',
+                icon: 'fa-thumbs-down',
+                color: 'pink',
+                count: 42,
+                critical: 6,
+                flags: [
+                    { name: 'High Complaint Volume', severity: 'high', description: 'Spike in customer complaints' },
+                    { name: 'Unresolved Disputes', severity: 'high', description: 'Backlog of pending disputes' },
+                    { name: 'Negative Reviews', severity: 'medium', description: 'Poor ratings on public platforms' },
+                    { name: 'Social Media Crises', severity: 'critical', description: 'Viral negative content' },
+                    { name: 'Account Errors', severity: 'high', description: 'Balance discrepancies, wrong charges' },
+                    { name: 'Long Wait Times', severity: 'medium', description: 'Poor service response times' },
+                    { name: 'Product Mis-selling', severity: 'critical', description: 'Inappropriate product recommendations' },
+                    { name: 'Hidden Fee Complaints', severity: 'high', description: 'Undisclosed or excessive fees' },
+                ]
+            },
+            {
+                id: 'financial-health',
+                name: 'Financial Health',
+                icon: 'fa-chart-line',
+                color: 'emerald',
+                count: 8,
+                critical: 2,
+                flags: [
+                    { name: 'Rising NPL Ratio', severity: 'critical', description: 'Non-performing loans exceeding threshold' },
+                    { name: 'Liquidity Stress', severity: 'critical', description: 'Cash flow or liquidity concerns' },
+                    { name: 'Credit Rating Downgrade', severity: 'high', description: 'Rating agency negative actions' },
+                    { name: 'Profit Margin Decline', severity: 'medium', description: 'Declining profitability trends' },
+                    { name: 'Capital Erosion', severity: 'high', description: 'Declining capital ratios' },
+                    { name: 'Concentration Risk', severity: 'medium', description: 'Overexposure to single sector/client' },
+                    { name: 'Market Risk Exposure', severity: 'medium', description: 'Excessive market volatility exposure' },
+                    { name: 'Interest Rate Risk', severity: 'medium', description: 'Vulnerability to rate changes' },
+                ]
+            },
+            {
+                id: 'ethics',
+                name: 'Ethics & Social',
+                icon: 'fa-globe',
+                color: 'teal',
+                count: 9,
+                critical: 3,
+                flags: [
+                    { name: 'Discriminatory Practices', severity: 'critical', description: 'Unfair treatment based on protected classes' },
+                    { name: 'Predatory Lending', severity: 'critical', description: 'Exploitative loan terms' },
+                    { name: 'Environmental Violations', severity: 'high', description: 'ESG policy breaches' },
+                    { name: 'Community Complaints', severity: 'medium', description: 'Negative community relations' },
+                    { name: 'Greenwashing', severity: 'high', description: 'Misleading sustainability claims' },
+                    { name: 'Executive Misconduct', severity: 'critical', description: 'Leadership ethical breaches' },
+                    { name: 'Whistleblower Reports', severity: 'high', description: 'Internal misconduct reports' },
+                    { name: 'Public Trust Erosion', severity: 'high', description: 'Declining public confidence' },
+                ]
+            }
+        ];
+
+        // Recent Alerts Data
+        const recentAlerts = [
+            { id: 1, type: 'Money Laundering', severity: 'critical', time: '5 min ago', status: 'active', account: 'ACC-78234' },
+            { id: 2, type: 'System Outage', severity: 'critical', time: '12 min ago', status: 'investigating', system: 'Mobile App' },
+            { id: 3, type: 'Customer Complaint Spike', severity: 'high', time: '25 min ago', status: 'active', count: '+340%' },
+            { id: 4, type: 'Unauthorized Access', severity: 'high', time: '1 hr ago', status: 'contained', user: 'EMP-4521' },
+            { id: 5, type: 'Regulatory Filing Due', severity: 'medium', time: '2 hrs ago', status: 'pending', deadline: '48 hrs' },
+        ];
+
+        // Color mappings
+        const colorMappings = {
+            red: { gradient: 'from-red-500 to-red-600', bg: 'bg-red-50 border-red-200', text: 'text-red-500' },
+            orange: { gradient: 'from-orange-500 to-orange-600', bg: 'bg-orange-50 border-orange-200', text: 'text-orange-500' },
+            purple: { gradient: 'from-purple-500 to-purple-600', bg: 'bg-purple-50 border-purple-200', text: 'text-purple-500' },
+            blue: { gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-50 border-blue-200', text: 'text-blue-500' },
+            yellow: { gradient: 'from-yellow-500 to-yellow-600', bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-500' },
+            pink: { gradient: 'from-pink-500 to-pink-600', bg: 'bg-pink-50 border-pink-200', text: 'text-pink-500' },
+            emerald: { gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-500' },
+            teal: { gradient: 'from-teal-500 to-teal-600', bg: 'bg-teal-50 border-teal-200', text: 'text-teal-500' },
+        };
+
+        const severityColors = {
+            critical: { bg: 'bg-red-500', bgLight: 'bg-red-50 border-red-200 text-red-800' },
+            high: { bg: 'bg-orange-500', bgLight: 'bg-orange-50 border-orange-200 text-orange-800' },
+            medium: { bg: 'bg-yellow-500', bgLight: 'bg-yellow-50 border-yellow-200 text-yellow-800' },
+            low: { bg: 'bg-blue-500', bgLight: 'bg-blue-50 border-blue-200 text-blue-800' },
+        };
+
+        const statusColors = {
+            active: 'bg-red-500/20 text-red-400',
+            investigating: 'bg-yellow-500/20 text-yellow-400',
+            contained: 'bg-blue-500/20 text-blue-400',
+            pending: 'bg-slate-600 text-slate-300',
+        };
+
+        let selectedCategory = null;
+
+        // Initialize Dashboard
+        function init() {
+            renderCategoryCards();
+            renderRecentAlerts();
+            renderCategoryFilters();
+            renderRedFlagsGrid();
+        }
+
+        // Switch Tab
+        function switchTab(tabId) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tabId) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Show/hide views
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('redflags-view').classList.add('hidden');
+            document.getElementById('flowchart-view').classList.add('hidden');
+            document.getElementById(`${tabId}-view`).classList.remove('hidden');
+        }
+
+        // Render Category Cards
+        function renderCategoryCards() {
+            const container = document.getElementById('category-cards');
+            container.innerHTML = redFlagCategories.map(category => `
+                <div onclick="selectCategory('${category.id}')" class="${colorMappings[category.color].bg} rounded-xl p-4 border cursor-pointer hover:shadow-lg transition-all">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="bg-gradient-to-r ${colorMappings[category.color].gradient} p-2 rounded-lg">
+                            <i class="fas ${category.icon} text-white"></i>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-2xl font-bold text-gray-800">${category.count}</span>
+                            ${category.critical > 0 ? `<span class="block text-xs text-red-600 font-medium">${category.critical} critical</span>` : ''}
+                        </div>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">${category.name}</h3>
+                    <p class="text-xs text-gray-500 mt-1">${category.flags.length} flag types monitored</p>
+                </div>
+            `).join('');
+        }
+
+        // Render Recent Alerts
+        function renderRecentAlerts() {
+            const container = document.getElementById('recent-alerts');
+            container.innerHTML = recentAlerts.map(alert => `
+                <div class="p-3 hover:bg-slate-700/50 cursor-pointer transition-colors">
+                    <div class="flex items-start gap-3">
+                        <span class="w-2 h-2 rounded-full mt-2 ${severityColors[alert.severity].bg} ${alert.severity === 'critical' ? 'animate-pulse' : ''}"></span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-white truncate">${alert.type}</p>
+                            <p class="text-xs text-slate-400">${alert.time}</p>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full ${statusColors[alert.status]}">${alert.status}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Category Filters
+        function renderCategoryFilters() {
+            const container = document.getElementById('category-filters');
+            container.innerHTML = `
+                <button onclick="filterCategory(null)" class="category-btn ${!selectedCategory ? 'active' : ''} px-4 py-2 rounded-lg text-sm font-medium transition-all bg-slate-700 text-slate-300 hover:bg-slate-600">
+                    All Categories
+                </button>
+                ${redFlagCategories.map(cat => `
+                    <button onclick="filterCategory('${cat.id}')" class="category-btn ${selectedCategory === cat.id ? 'active' : ''} px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-slate-700 text-slate-300 hover:bg-slate-600">
+                        <i class="fas ${cat.icon}"></i>
+                        ${cat.name}
+                        <span class="bg-slate-600 text-xs px-1.5 rounded">${cat.count}</span>
+                    </button>
+                `).join('')}
+            `;
+        }
+
+        // Render Red Flags Grid
+        function renderRedFlagsGrid(filterId = null) {
+            const container = document.getElementById('redflags-grid');
+            const categories = filterId 
+                ? redFlagCategories.filter(c => c.id === filterId)
+                : redFlagCategories;
+
+            container.innerHTML = categories.map(category => `
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r ${colorMappings[category.color].gradient} p-4">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div class="flex items-center gap-3">
+                                <i class="fas ${category.icon} text-white text-lg"></i>
+                                <h3 class="text-lg font-bold text-white">${category.name}</h3>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm">${category.count} active</span>
+                                ${category.critical > 0 ? `<span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm animate-pulse">${category.critical} critical</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            ${category.flags.map(flag => `
+                                <div class="${severityColors[flag.severity].bgLight} rounded-xl p-3 border cursor-pointer hover:shadow-md transition-all">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <span class="w-2 h-2 rounded-full ${severityColors[flag.severity].bg} ${flag.severity === 'critical' ? 'animate-pulse' : ''}"></span>
+                                        <span class="text-xs font-medium uppercase">${flag.severity}</span>
+                                    </div>
+                                    <h4 class="font-semibold text-sm mb-1">${flag.name}</h4>
+                                    <p class="text-xs opacity-75">${flag.description}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Select Category (from dashboard)
+        function selectCategory(categoryId) {
+            selectedCategory = categoryId;
+            switchTab('redflags');
+            renderCategoryFilters();
+            renderRedFlagsGrid(categoryId);
+        }
+
+        // Filter Category (from red flags page)
+        function filterCategory(categoryId) {
+            selectedCategory = categoryId;
+            renderCategoryFilters();
+            renderRedFlagsGrid(categoryId);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
