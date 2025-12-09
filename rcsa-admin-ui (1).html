@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RCSA Management System - Admin Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.1/dist/umd/lucide.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(to bottom right, #f8fafc, #dbeafe, #f1f5f9);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(to right, #1e293b, #0f172a, #1e3a8a);
+            color: white;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-bottom: 4px solid #3b82f6;
+        }
+
+        .header-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-family: Georgia, serif;
+            font-size: 2.25rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #bfdbfe;
+            font-size: 1.125rem;
+        }
+
+        .admin-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(37, 99, 235, 0.3);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .step-number {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .step-number.active {
+            background: linear-gradient(to bottom right, #2563eb, #1d4ed8);
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+            transform: scale(1.1);
+        }
+
+        .step-number.completed {
+            background: #10b981;
+            color: white;
+        }
+
+        .step-number.inactive {
+            background: #e2e8f0;
+            color: #64748b;
+        }
+
+        .step-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .step-label.active {
+            color: #2563eb;
+        }
+
+        .step-label.inactive {
+            color: #64748b;
+        }
+
+        .step-connector {
+            flex: 1;
+            height: 0.25rem;
+            margin: 1.5rem 0.5rem 0;
+            border-radius: 0.125rem;
+            transition: all 0.3s;
+        }
+
+        .step-connector.completed {
+            background: #10b981;
+        }
+
+        .step-connector.inactive {
+            background: #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .source-btn {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 2px solid #cbd5e1;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .source-btn:hover {
+            border-color: #60a5fa;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .source-btn.active {
+            border-color: #2563eb;
+            background: #eff6ff;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
+            transform: scale(1.05);
+        }
+
+        .source-btn svg {
+            width: 2rem;
+            height: 2rem;
+            color: #94a3b8;
+        }
+
+        .source-btn.active svg {
+            color: #2563eb;
+        }
+
+        .source-btn span {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .source-btn.active span {
+            color: #2563eb;
+        }
+
+        .form-group {
+            margin-top: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-select, .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #cbd5e1;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            color: #334155;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #60a5fa;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            font-size: 1.125rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, #2563eb, #1d4ed8);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.3);
+            transform: scale(1.05);
+        }
+
+        .btn-primary:disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-success {
+            background: linear-gradient(to right, #16a34a, #15803d);
+            color: white;
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 20px 25px -5px rgba(22, 163, 74, 0.3);
+            transform: scale(1.05);
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            max-height: 16rem;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checkbox-label:hover {
+            background: white;
+        }
+
+        .checkbox-label input {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .filter-row, .calc-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 0.75rem;
+        }
+
+        .filter-row select, .filter-row input,
+        .calc-row select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            flex: 1;
+        }
+
+        .delete-btn {
+            padding: 0.5rem;
+            background: transparent;
+            border: none;
+            color: #dc2626;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #fee2e2;
+        }
+
+        .empty-state {
+            padding: 1.5rem;
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.5rem;
+            text-align: center;
+            color: #64748b;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .data-table thead {
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+
+        .data-table th {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .data-table td {
+            color: #64748b;
+        }
+
+        .data-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .result-card {
+            padding: 1.25rem;
+            background: linear-gradient(to bottom right, #eff6ff, #e0e7ff);
+            border-radius: 0.5rem;
+            border: 2px solid #bfdbfe;
+        }
+
+        .result-card-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+
+        .result-card-operation {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-card-value {
+            font-size: 1.875rem;
+            font-weight: bold;
+            color: #1d4ed8;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 2rem;
+        }
+
+        .config-item {
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            background: linear-gradient(to bottom right, white, #f8fafc);
+            margin-bottom: 0.75rem;
+            transition: all 0.3s;
+        }
+
+        .config-item:hover {
+            border-color: #60a5fa;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.5rem;
+        }
+
+        .config-title {
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        .config-details {
+            font-size: 0.75rem;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .success-message {
+            color: #16a34a;
+            font-weight: 500;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .button-row .btn {
+            flex: 1;
+        }
+
+        .summary-box {
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .summary-title {
+            font-weight: bold;
+            font-size: 1.125rem;
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .summary-item span {
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .summary-item p {
+            color: #334155;
+            margin-top: 0.25rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div>
+                <h1>RCSA Management System</h1>
+                <p>Risk & Control Self-Assessment Administration</p>
+            </div>
+            <div class="admin-badge">
+                <i data-lucide="settings"></i>
+                <span>Admin Panel</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="grid">
+            <!-- Main Panel -->
+            <div>
+                <!-- Progress Steps -->
+                <div class="card">
+                    <div class="progress-steps" id="progressSteps"></div>
+                </div>
+
+                <!-- Step Content -->
+                <div id="stepContent"></div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="card">
+                    <h3 class="section-title">
+                        <i data-lucide="eye"></i>
+                        RCSA Management Table
+                    </h3>
+                    <div id="savedConfigs"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock Data
+        const mockDatabases = {
+            'Risk Events': [
+                { id: 1, risk_id: 'RSK001', risk_name: 'Operational Failure', category: 'Operational', severity: 'High', likelihood: 'Medium', impact_score: 85, department: 'IT', status: 'Open', date_identified: '2024-01-15' },
+                { id: 2, risk_id: 'RSK002', risk_name: 'Data Breach', category: 'Cybersecurity', severity: 'Critical', likelihood: 'Low', impact_score: 95, department: 'Security', status: 'Open', date_identified: '2024-01-20' },
+                { id: 3, risk_id: 'RSK003', risk_name: 'Compliance Violation', category: 'Regulatory', severity: 'High', likelihood: 'Medium', impact_score: 78, department: 'Legal', status: 'Mitigated', date_identified: '2024-02-01' },
+                { id: 4, risk_id: 'RSK004', risk_name: 'Financial Loss', category: 'Financial', severity: 'Medium', likelihood: 'High', impact_score: 65, department: 'Finance', status: 'Open', date_identified: '2024-02-10' },
+                { id: 5, risk_id: 'RSK005', risk_name: 'System Downtime', category: 'Operational', severity: 'Medium', likelihood: 'Medium', impact_score: 55, department: 'IT', status: 'Closed', date_identified: '2024-02-15' },
+            ],
+            'Controls': [
+                { control_id: 'CTR001', control_name: 'Access Management', effectiveness: 'Effective', frequency: 'Daily', owner: 'John Smith', last_review: '2024-03-01', status: 'Active' },
+                { control_id: 'CTR002', control_name: 'Backup Procedures', effectiveness: 'Partially Effective', frequency: 'Weekly', owner: 'Jane Doe', last_review: '2024-02-28', status: 'Active' },
+                { control_id: 'CTR003', control_name: 'Incident Response', effectiveness: 'Effective', frequency: 'As Needed', owner: 'Mike Johnson', last_review: '2024-03-05', status: 'Active' },
+                { control_id: 'CTR004', control_name: 'Training Program', effectiveness: 'Not Effective', frequency: 'Quarterly', owner: 'Sarah Williams', last_review: '2024-01-15', status: 'Under Review' },
+            ],
+            'Assessments': [
+                { assessment_id: 'ASS001', assessment_date: '2024-03-01', assessor: 'Internal Audit', risk_rating: 'Medium', residual_risk: 45, control_gaps: 2, recommendations: 5 },
+                { assessment_id: 'ASS002', assessment_date: '2024-03-05', assessor: 'External Auditor', risk_rating: 'High', residual_risk: 72, control_gaps: 4, recommendations: 8 },
+                { assessment_id: 'ASS003', assessment_date: '2024-03-10', assessor: 'Internal Audit', risk_rating: 'Low', residual_risk: 28, control_gaps: 1, recommendations: 2 },
+            ]
+        };
+
+        // Application State
+        let state = {
+            step: 1,
+            dataSource: 'database',
+            selectedDatabase: '',
+            uploadedFile: null,
+            currentData: [],
+            selectedColumns: [],
+            filters: [],
+            calculations: [],
+            configName: '',
+            savedConfigs: [
+                {
+                    id: 1,
+                    name: 'High Risk Summary',
+                    source: 'Database: Risk Events',
+                    columns: ['risk_name', 'severity', 'impact_score'],
+                    filters: [{ column: 'severity', operator: 'equals', value: 'High' }],
+                    calculations: [{ column: 'impact_score', operation: 'average', outputType: 'percentage' }],
+                    createdDate: '2024-03-01'
+                },
+                {
+                    id: 2,
+                    name: 'Control Effectiveness Report',
+                    source: 'Database: Controls',
+                    columns: ['control_name', 'effectiveness', 'status'],
+                    filters: [{ column: 'status', operator: 'equals', value: 'Active' }],
+                    calculations: [{ column: 'control_id', operation: 'count', outputType: 'count' }],
+                    createdDate: '2024-03-05'
+                }
+            ]
+        };
+
+        // Initialize
+        function init() {
+            renderProgressSteps();
+            renderStep();
+            renderSavedConfigs();
+            lucide.createIcons();
+        }
+
+        // Render Progress Steps
+        function renderProgressSteps() {
+            const steps = [
+                { num: 1, label: 'Data Source' },
+                { num: 2, label: 'Columns & Filters' },
+                { num: 3, label: 'Calculations' },
+                { num: 4, label: 'Save' }
+            ];
+
+            let html = '';
+            steps.forEach((s, idx) => {
+                const isActive = state.step === s.num;
+                const isCompleted = state.step > s.num;
+                const isInactive = state.step < s.num;
+
+                html += `
+                    <div class="step" onclick="setStep(${s.num})">
+                        <div class="step-number ${isActive ? 'active' : isCompleted ? 'completed' : 'inactive'}">
+                            ${s.num}
+                        </div>
+                        <span class="step-label ${isActive ? 'active' : 'inactive'}">${s.label}</span>
+                    </div>
+                `;
+
+                if (idx < steps.length - 1) {
+                    html += `<div class="step-connector ${isCompleted ? 'completed' : 'inactive'}"></div>`;
+                }
+            });
+
+            document.getElementById('progressSteps').innerHTML = html;
+        }
+
+        // Set Step
+        function setStep(num) {
+            state.step = num;
+            renderProgressSteps();
+            renderStep();
+            lucide.createIcons();
+        }
+
+        // Render Current Step
+        function renderStep() {
+            const content = document.getElementById('stepContent');
+            
+            switch(state.step) {
+                case 1:
+                    content.innerHTML = renderStep1();
+                    break;
+                case 2:
+                    content.innerHTML = renderStep2();
+                    break;
+                case 3:
+                    content.innerHTML = renderStep3();
+                    break;
+                case 4:
+                    content.innerHTML = renderStep4();
+                    break;
+            }
+
+            lucide.createIcons();
+        }
+
+        // Step 1: Data Source
+        function renderStep1() {
+            return `
+                <div class="card fade-in" style="margin-top: 1.5rem;">
+                    <h2 class="section-title">
+                        <i data-lucide="database"></i>
+                        Step 1: Select Data Source
+                    </h2>
+
+                    <div class="form-group">
+                        <label class="form-label">Data Source Type</label>
+                        <div class="btn-group">
+                            <button class="source-btn ${state.dataSource === 'database' ? 'active' : ''}" 
+                                    onclick="setDataSource('database')">
+                                <i data-lucide="database"></i>
+                                <span>Database</span>
+                            </button>
+                            <button class="source-btn ${state.dataSource === 'file' ? 'active' : ''}" 
+                                    onclick="setDataSource('file')">
+                                <i data-lucide="upload"></i>
+                                <span>Upload File</span>
+                            </button>
+                            <button class="source-btn ${state.dataSource === 'both' ? 'active' : ''}" 
+                                    onclick="setDataSource('both')">
+                                <i data-lucide="plus"></i>
+                                <span>Combination</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    ${(state.dataSource === 'database' || state.dataSource === 'both') ? `
+                        <div class="form-group">
+                            <label class="form-label">Select Database Table</label>
+                            <select class="form-select" onchange="selectDatabase(this.value)">
+                                <option value="">Choose a table...</option>
+                                ${Object.keys(mockDatabases).map(db => 
+                                    `<option value="${db}" ${state.selectedDatabase === db ? 'selected' : ''}>${db}</option>`
+                                ).join('')}
+                            </select>
+                            ${state.selectedDatabase ? `
+                                <p class="success-message">✓ Loaded ${state.currentData.length} records from ${state.selectedDatabase}</p>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+
+                    ${(state.dataSource === 'file' || state.dataSource === 'both') ? `
+                        <div class="form-group">
+                            <label class="form-label">Upload File (CSV, Excel)</label>
+                            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                                <i data-lucide="upload" style="width: 3rem; height: 3rem; color: #94a3b8; margin: 0 auto 0.75rem;"></i>
+                                <p style="color: #64748b; font-weight: 500;">Click to upload or drag and drop</p>
+                                <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.25rem;">CSV or Excel files</p>
+                                ${state.uploadedFile ? `
+                                    <p class="success-message">✓ ${state.uploadedFile}</p>
+                                ` : ''}
+                            </div>
+                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileUpload(this)" style="display: none;">
+                        </div>
+                    ` : ''}
+
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;" 
+                            onclick="setStep(2)" ${state.currentData.length === 0 ? 'disabled' : ''}>
+                        Continue to Column Selection
+                        <i data-lucide="chevron-right"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        // Step 2: Columns & Filters
+        function renderStep2() {
+            const availableColumns = state.currentData.length > 0 ? Object.keys(state.currentData[0]) : [];
+            const filteredData = getFilteredData();
+
+            return `
+                <div class="card fade-in" style="margin-top: 1.5rem;">
+                    <h2 class="section-title">
+                        <i data-lucide="filter"></i>
+                        Step 2: Select Columns & Apply Filters
+                    </h2>
+
+                    <div class="form-group">
+                        <label class="form-label">Select Columns to Display</label>
+                        <div class="checkbox-grid">
+                            ${availableColumns.map(col => `
+                                <label class="checkbox-label">
+                                    <input type="checkbox" 
+                                           ${state.selectedColumns.includes(col) ? 'checked' : ''}
+                                           onchange="toggleColumn('${col}')">
+                                    <span style="font-size: 0.875rem; font-weight: 500; color: #334155;">${col}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <label class="form-label" style="margin: 0;">Filters</label>
+                            <button class="btn btn-success btn-small" onclick="addFilter()">
+                                <i data-lucide="plus"></i>
+                                Add Filter
+                            </button>
+                        </div>
+
+                        ${state.filters.length === 0 ? `
+                            <div class="empty-state">
+                                No filters applied. Click "Add Filter" to create one.
+                            </div>
+                        ` : `
+                            <div id="filtersList">
+                                ${state.filters.map((filter, idx) => `
+                                    <div class="filter-row">
+                                        <select onchange="updateFilter(${idx}, 'column', this.value)">
+                                            <option value="">Select column...</option>
+                                            ${availableColumns.map(col => 
+                                                `<option value="${col}" ${filter.column === col ? 'selected' : ''}>${col}</option>`
+                                            ).join('')}
+                                        </select>
+                                        <select onchange="updateFilter(${idx}, 'operator', this.value)">
+                                            <option value="equals" ${filter.operator === 'equals' ? 'selected' : ''}>Equals</option>
+                                            <option value="contains" ${filter.operator === 'contains' ? 'selected' : ''}>Contains</option>
+                                            <option value="greater" ${filter.operator === 'greater' ? 'selected' : ''}>Greater Than</option>
+                                            <option value="less" ${filter.operator === 'less' ? 'selected' : ''}>Less Than</option>
+                                        </select>
+                                        <input type="text" placeholder="Value..." value="${filter.value}"
+                                               onchange="updateFilter(${idx}, 'value', this.value)">
+                                        <button class="delete-btn" onclick="removeFilter(${idx})">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Data Preview (${filteredData.length} records)</label>
+                        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; max-height: 16rem; overflow-y: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        ${state.selectedColumns.slice(0, 6).map(col => 
+                                            `<th>${col}</th>`
+                                        ).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filteredData.slice(0, 5).map(row => `
+                                        <tr>
+                                            ${state.selectedColumns.slice(0, 6).map(col => 
+                                                `<td>${row[col]}</td>`
+                                            ).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="button-row">
+                        <button class="btn btn-secondary" onclick="setStep(1)">Back</button>
+                        <button class="btn btn-primary" onclick="setStep(3)">
+                            Continue to Calculations
+                            <i data-lucide="chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Step 3: Calculations
+        function renderStep3() {
+            const availableColumns = state.currentData.length > 0 ? Object.keys(state.currentData[0]) : [];
+            const results = calculateResults();
+
+            return `
+                <div class="card fade-in" style="margin-top: 1.5rem;">
+                    <h2 class="section-title">
+                        <i data-lucide="settings"></i>
+                        Step 3: Define Calculations & Output
+                    </h2>
+
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <label class="form-label" style="margin: 0;">Calculations & Formulas</label>
+                            <button class="btn btn-success btn-small" onclick="addCalculation()">
+                                <i data-lucide="plus"></i>
+                                Add Calculation
+                            </button>
+                        </div>
+
+                        ${state.calculations.length === 0 ? `
+                            <div class="empty-state">
+                                No calculations defined. Click "Add Calculation" to create one.
+                            </div>
+                        ` : `
+                            <div>
+                                ${state.calculations.map((calc, idx) => `
+                                    <div class="calc-row">
+                                        <select onchange="updateCalculation(${idx}, 'column', this.value)">
+                                            <option value="">Select column...</option>
+                                            ${availableColumns.map(col => 
+                                                `<option value="${col}" ${calc.column === col ? 'selected' : ''}>${col}</option>`
+                                            ).join('')}
+                                        </select>
+                                        <select onchange="updateCalculation(${idx}, 'operation', this.value)">
+                                            <option value="sum" ${calc.operation === 'sum' ? 'selected' : ''}>Sum</option>
+                                            <option value="average" ${calc.operation === 'average' ? 'selected' : ''}>Average</option>
+                                            <option value="count" ${calc.operation === 'count' ? 'selected' : ''}>Count</option>
+                                            <option value="min" ${calc.operation === 'min' ? 'selected' : ''}>Minimum</option>
+                                            <option value="max" ${calc.operation === 'max' ? 'selected' : ''}>Maximum</option>
+                                        </select>
+                                        <select onchange="updateCalculation(${idx}, 'outputType', this.value)">
+                                            <option value="count" ${calc.outputType === 'count' ? 'selected' : ''}>Count</option>
+                                            <option value="percentage" ${calc.outputType === 'percentage' ? 'selected' : ''}>Percentage</option>
+                                        </select>
+                                        <button class="delete-btn" onclick="removeCalculation(${idx})">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
+                    </div>
+
+                    ${state.calculations.length > 0 && results.length > 0 ? `
+                        <div class="form-group">
+                            <label class="form-label">Calculation Results</label>
+                            <div class="result-grid">
+                                ${results.map(result => `
+                                    <div class="result-card">
+                                        <div class="result-card-label">${result.column}</div>
+                                        <div class="result-card-operation">${result.operation}</div>
+                                        <div class="result-card-value">${result.result}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="button-row">
+                        <button class="btn btn-secondary" onclick="setStep(2)">Back</button>
+                        <button class="btn btn-primary" onclick="setStep(4)">
+                            Continue to Save
+                            <i data-lucide="chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Step 4: Save
+        function renderStep4() {
+            const filteredData = getFilteredData();
+
+            return `
+                <div class="card fade-in" style="margin-top: 1.5rem;">
+                    <h2 class="section-title">
+                        <i data-lucide="save"></i>
+                        Step 4: Save Configuration
+                    </h2>
+
+                    <div class="form-group">
+                        <label class="form-label">Configuration Name</label>
+                        <input type="text" class="form-input" placeholder="Enter a name for this configuration..."
+                               value="${state.configName}" oninput="state.configName = this.value">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="summary-box">
+                            <div class="summary-title">Configuration Summary</div>
+                            <div class="summary-grid">
+                                <div class="summary-item">
+                                    <span>Data Source:</span>
+                                    <p>${state.dataSource === 'database' ? `Database: ${state.selectedDatabase}` : `File: ${state.uploadedFile}`}</p>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Records:</span>
+                                    <p>${filteredData.length} rows</p>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Columns Selected:</span>
+                                    <p>${state.selectedColumns.length} columns</p>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Filters Applied:</span>
+                                    <p>${state.filters.length} filters</p>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Calculations:</span>
+                                    <p>${state.calculations.length} formulas</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-row">
+                        <button class="btn btn-secondary" onclick="setStep(3)">Back</button>
+                        <button class="btn btn-success" onclick="saveConfiguration()">
+                            <i data-lucide="save"></i>
+                            Save Configuration
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Data Source Functions
+        function setDataSource(source) {
+            state.dataSource = source;
+            renderStep();
+            lucide.createIcons();
+        }
+
+        function selectDatabase(dbName) {
+            if (!dbName) return;
+            state.selectedDatabase = dbName;
+            state.currentData = mockDatabases[dbName];
+            state.selectedColumns = Object.keys(mockDatabases[dbName][0] || {});
+            renderStep();
+            lucide.createIcons();
+        }
+
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                state.uploadedFile = file.name;
+                state.currentData = mockDatabases['Risk Events'].slice(0, 3);
+                state.selectedColumns = Object.keys(mockDatabases['Risk Events'][0]);
+                renderStep();
+                lucide.createIcons();
+            }
+        }
+
+        // Column Functions
+        function toggleColumn(col) {
+            const index = state.selectedColumns.indexOf(col);
+            if (index > -1) {
+                state.selectedColumns.splice(index, 1);
+            } else {
+                state.selectedColumns.push(col);
+            }
+        }
+
+        // Filter Functions
+        function addFilter() {
+            state.filters.push({ column: '', operator: 'equals', value: '' });
+            renderStep();
+            lucide.createIcons();
+        }
+
+        function updateFilter(index, field, value) {
+            state.filters[index][field] = value;
+            renderStep();
+            lucide.createIcons();
+        }
+
+        function removeFilter(index) {
+            state.filters.splice(index, 1);
+            renderStep();
+            lucide.createIcons();
+        }
+
+        function getFilteredData() {
+            if (!state.currentData.length) return [];
+            
+            let filtered = [...state.currentData];
+            
+            state.filters.forEach(filter => {
+                if (filter.column && filter.value) {
+                    filtered = filtered.filter(row => {
+                        const cellValue = String(row[filter.column]).toLowerCase();
+                        const filterValue = String(filter.value).toLowerCase();
+                        
+                        switch(filter.operator) {
+                            case 'equals': return cellValue === filterValue;
+                            case 'contains': return cellValue.includes(filterValue);
+                            case 'greater': return parseFloat(row[filter.column]) > parseFloat(filter.value);
+                            case 'less': return parseFloat(row[filter.column]) < parseFloat(filter.value);
+                            default: return true;
+                        }
+                    });
+                }
+            });
+            
+            return filtered;
+        }
+
+        // Calculation Functions
+        function addCalculation() {
+            state.calculations.push({ column: '', operation: 'sum', outputType: 'count' });
+            renderStep();
+            lucide.createIcons();
+        }
+
+        function updateCalculation(index, field, value) {
+            state.calculations[index][field] = value;
+            renderStep();
+            lucide.createIcons();
+        }
+
+        function removeCalculation(index) {
+            state.calculations.splice(index, 1);
+            renderStep();
+            lucide.createIcons();
+        }
+
+        function calculateResults() {
+            const filteredData = getFilteredData();
+            return state.calculations.map(calc => {
+                if (!calc.column) return null;
+                
+                const values = filteredData.map(row => row[calc.column]).filter(v => !isNaN(parseFloat(v)));
+                
+                let result;
+                switch(calc.operation) {
+                    case 'sum':
+                        result = values.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+                        break;
+                    case 'average':
+                        result = values.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / values.length;
+                        break;
+                    case 'count':
+                        result = filteredData.length;
+                        break;
+                    case 'min':
+                        result = Math.min(...values);
+                        break;
+                    case 'max':
+                        result = Math.max(...values);
+                        break;
+                    default:
+                        result = 0;
+                }
+                
+                return {
+                    column: calc.column,
+                    operation: calc.operation,
+                    result: calc.outputType === 'percentage' ? `${result.toFixed(2)}%` : result.toFixed(2),
+                    outputType: calc.outputType
+                };
+            }).filter(Boolean);
+        }
+
+        // Save Configuration
+        function saveConfiguration() {
+            if (!state.configName) {
+                alert('Please enter a configuration name');
+                return;
+            }
+
+            const newConfig = {
+                id: state.savedConfigs.length + 1,
+                name: state.configName,
+                source: state.dataSource === 'database' ? `Database: ${state.selectedDatabase}` : `File: ${state.uploadedFile}`,
+                columns: [...state.selectedColumns],
+                filters: [...state.filters],
+                calculations: [...state.calculations],
+                createdDate: new Date().toISOString().split('T')[0]
+            };
+
+            state.savedConfigs.push(newConfig);
+            renderSavedConfigs();
+            alert('Configuration saved successfully!');
+            resetForm();
+        }
+
+        // Reset Form
+        function resetForm() {
+            state.step = 1;
+            state.dataSource = 'database';
+            state.selectedDatabase = '';
+            state.uploadedFile = null;
+            state.currentData = [];
+            state.selectedColumns = [];
+            state.filters = [];
+            state.calculations = [];
+            state.configName = '';
+            renderProgressSteps();
+            renderStep();
+            lucide.createIcons();
+        }
+
+        // Saved Configs
+        function renderSavedConfigs() {
+            const container = document.getElementById('savedConfigs');
+            
+            if (state.savedConfigs.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #64748b;">
+                        <p style="font-size: 0.875rem;">No saved configurations yet.</p>
+                        <p style="font-size: 0.75rem; margin-top: 0.5rem;">Complete the workflow to save your first configuration.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="max-height: 600px; overflow-y: auto;">
+                    ${state.savedConfigs.map(config => `
+                        <div class="config-item">
+                            <div class="config-header">
+                                <h4 class="config-title">${config.name}</h4>
+                                <button class="delete-btn" onclick="deleteConfig(${config.id})">
+                                    <i data-lucide="trash-2"></i>
+                                </button>
+                            </div>
+                            <div class="config-details">
+                                <p><strong>Source:</strong> ${config.source}</p>
+                                <p><strong>Columns:</strong> ${config.columns.length}</p>
+                                <p><strong>Filters:</strong> ${config.filters.length}</p>
+                                <p><strong>Calculations:</strong> ${config.calculations.length}</p>
+                                <p style="color: #94a3b8; font-style: italic;">${config.createdDate}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                    <p style="font-size: 0.875rem; font-weight: 600; color: #334155;">
+                        Total Configurations: <span style="color: #2563eb;">${state.savedConfigs.length}</span>
+                    </p>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function deleteConfig(id) {
+            state.savedConfigs = state.savedConfigs.filter(config => config.id !== id);
+            renderSavedConfigs();
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

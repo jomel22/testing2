@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Reputation Risk Monitor - Red Flag Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .tab-btn.active {
+            color: white;
+            border-color: #ef4444;
+            background: rgba(51, 65, 85, 0.5);
+        }
+        .category-btn.active {
+            background: white;
+            color: #1f2937;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        .backdrop-blur {
+            backdrop-filter: blur(12px);
+        }
+        .heatmap-cell {
+            transition: all 0.2s ease;
+        }
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .country-row:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .risk-bar {
+            transition: width 0.5s ease;
+        }
+        .map-country {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .map-country:hover {
+            filter: brightness(1.2);
+            transform: scale(1.02);
+        }
+        .map-country.selected {
+            stroke: #3b82f6;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+        }
+        .singapore-highlight {
+            animation: singaporePulse 2s infinite;
+        }
+        @keyframes singaporePulse {
+            0%, 100% { 
+                filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
+                transform: scale(1);
+            }
+            50% { 
+                filter: drop-shadow(0 0 20px rgba(239, 68, 68, 1));
+                transform: scale(1.1);
+            }
+        }
+        .flag-card {
+            transition: all 0.3s ease;
+        }
+        .flag-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <!-- Header -->
+    <header class="bg-slate-800/50 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-r from-red-500 to-orange-500 p-2 rounded-xl">
+                        <i class="fas fa-shield-alt text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Bank Reputation Risk Monitor</h1>
+                        <p class="text-xs text-slate-400">Red Flag Detection & Response System</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 bg-slate-700 px-3 py-2 rounded-lg border border-slate-600">
+                        <i class="fas fa-map-marker-alt text-red-400"></i>
+                        <span class="text-white text-sm font-medium" id="selected-location">Singapore</span>
+                    </div>
+                    <select id="timeRange" class="bg-slate-700 text-white text-sm rounded-lg px-3 py-2 border border-slate-600">
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d" selected>Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                        <option value="90d">Last 90 Days</option>
+                    </select>
+                    <button class="bg-slate-700 p-2 rounded-lg border border-slate-600 hover:bg-slate-600 relative">
+                        <i class="fas fa-bell text-white"></i>
+                        <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">5</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-slate-800/30 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex gap-1 overflow-x-auto">
+                <button onclick="switchTab('dashboard')" class="tab-btn active flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all whitespace-nowrap" data-tab="dashboard">
+                    <i class="fas fa-chart-bar"></i>
+                    Dashboard
+                </button>
+                <button onclick="switchTab('worldmap')" class="tab-btn flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all whitespace-nowrap" data-tab="worldmap">
+                    <i class="fas fa-globe"></i>
+                    World Map
+                </button>
+                <button onclick="switchTab('redflags')" class="tab-btn flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all whitespace-nowrap" data-tab="redflags">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Red Flag List
+                </button>
+                <button onclick="switchTab('heatmap')" class="tab-btn flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all whitespace-nowrap" data-tab="heatmap">
+                    <i class="fas fa-th"></i>
+                    Heatmaps
+                </button>
+                <!-- <button onclick="switchTab('country')" class="tab-btn flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all whitespace-nowrap" data-tab="country">
+                    <i class="fas fa-flag"></i>
+                    Country Risk
+                </button> -->
+                <button onclick="switchTab('flowchart')" class="tab-btn flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all whitespace-nowrap" data-tab="flowchart">
+                    <i class="fas fa-sitemap"></i>
+                    System Flow
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="space-y-6">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-exclamation-triangle text-red-400"></i>
+                        <span class="text-xs text-slate-400">Total</span>
+                    </div>
+                    <p class="text-2xl font-bold text-white">17</p>
+                    <p class="text-xs text-slate-400">Active Red Flags</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-red-500/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-exclamation-circle text-red-500"></i>
+                        <span class="text-xs text-red-400">Critical</span>
+                    </div>
+                    <p class="text-2xl font-bold text-red-400">6</p>
+                    <p class="text-xs text-slate-400">Need Immediate Action</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-check-circle text-green-400"></i>
+                        <span class="text-xs text-slate-400">Resolved</span>
+                    </div>
+                    <p class="text-2xl font-bold text-green-400">8</p>
+                    <p class="text-xs text-slate-400">Resolved Today</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-clock text-yellow-400"></i>
+                        <span class="text-xs text-slate-400">Pending</span>
+                    </div>
+                    <p class="text-2xl font-bold text-yellow-400">11</p>
+                    <p class="text-xs text-slate-400">Awaiting Review</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-chart-line text-blue-400"></i>
+                        <span class="text-xs text-slate-400">Avg Time</span>
+                    </div>
+                    <p class="text-2xl font-bold text-blue-400">2.8 hrs</p>
+                    <p class="text-xs text-slate-400">Resolution Time</p>
+                </div>
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-shield-alt text-emerald-400"></i>
+                        <span class="text-xs text-slate-400">Score</span>
+                    </div>
+                    <p class="text-2xl font-bold text-emerald-400">78/100</p>
+                    <p class="text-xs text-slate-400">Reputation Score</p>
+                </div>
+            </div>
+
+            <!-- Category Overview Cards -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- People Card -->
+                <div onclick="selectCategory('people')" class="flag-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 cursor-pointer text-white shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="bg-white/20 p-3 rounded-xl">
+                            <i class="fas fa-users text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-3xl font-bold">5</span>
+                            <p class="text-xs text-blue-100">Red Flags</p>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">People</h3>
+                    <p class="text-sm text-blue-100 mb-4">Human-related security risks and behavioral red flags</p>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="bg-red-500 px-2 py-1 rounded-full text-xs">2 Critical</span>
+                        <span class="text-blue-100">View Details →</span>
+                    </div>
+                </div>
+
+                <!-- Process Card -->
+                <div onclick="selectCategory('process')" class="flag-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 cursor-pointer text-white shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="bg-white/20 p-3 rounded-xl">
+                            <i class="fas fa-cogs text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-3xl font-bold">8</span>
+                            <p class="text-xs text-purple-100">Red Flags</p>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Process</h3>
+                    <p class="text-sm text-purple-100 mb-4">Procedural gaps and operational security risks</p>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="bg-red-500 px-2 py-1 rounded-full text-xs">3 Critical</span>
+                        <span class="text-purple-100">View Details →</span>
+                    </div>
+                </div>
+
+                <!-- Technology Card -->
+                <div onclick="selectCategory('technology')" class="flag-card bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 cursor-pointer text-white shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="bg-white/20 p-3 rounded-xl">
+                            <i class="fas fa-server text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-3xl font-bold">6</span>
+                            <p class="text-xs text-orange-100">Red Flags</p>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Technology</h3>
+                    <p class="text-sm text-orange-100 mb-4">Technical vulnerabilities and system risks</p>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="bg-red-500 px-2 py-1 rounded-full text-xs">2 Critical</span>
+                        <span class="text-orange-100">View Details →</span>
+                    </div>
+                </div>
+
+                <!-- Data Card -->
+                <div onclick="selectCategory('data')" class="flag-card bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 cursor-pointer text-white shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="bg-white/20 p-3 rounded-xl">
+                            <i class="fas fa-database text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-3xl font-bold">1</span>
+                            <p class="text-xs text-emerald-100">Red Flags</p>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Data</h3>
+                    <p class="text-sm text-emerald-100 mb-4">Data protection and information security risks</p>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="bg-red-500 px-2 py-1 rounded-full text-xs">1 Critical</span>
+                        <span class="text-emerald-100">View Details →</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Alerts & Quick Actions -->
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Recent Alerts -->
+                <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur rounded-xl border border-slate-700 overflow-hidden">
+                    <div class="p-4 border-b border-slate-700 flex items-center justify-between">
+                        <h3 class="font-semibold text-white flex items-center gap-2">
+                            <i class="fas fa-bell text-red-400"></i>
+                            Recent Red Flag Alerts
+                        </h3>
+                        <span class="text-xs text-slate-400">Last 24 hours</span>
+                    </div>
+                    <div class="divide-y divide-slate-700" id="recent-alerts">
+                    </div>
+                </div>
+
+                <!-- Risk Distribution -->
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl border border-slate-700 p-6">
+                    <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-blue-400"></i>
+                        Risk Distribution
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-300">People</span>
+                                <span class="text-blue-400">25%</span>
+                            </div>
+                            <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500 rounded-full" style="width: 25%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-300">Process</span>
+                                <span class="text-purple-400">40%</span>
+                            </div>
+                            <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-purple-500 rounded-full" style="width: 40%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-300">Technology</span>
+                                <span class="text-orange-400">30%</span>
+                            </div>
+                            <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-orange-500 rounded-full" style="width: 30%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-300">Data</span>
+                                <span class="text-emerald-400">5%</span>
+                            </div>
+                            <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full" style="width: 5%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- World Map View -->
+        <div id="worldmap-view" class="space-y-6 hidden">
+            <!-- Map Header -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <i class="fas fa-globe-asia text-blue-500"></i>
+                            Interactive World Risk Map
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">Click on a country or region to view detailed risk assessment</p>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-4 h-4 bg-green-500 rounded"></span> Low Risk</span>
+                        <span class="flex items-center gap-1"><span class="w-4 h-4 bg-yellow-500 rounded"></span> Medium</span>
+                        <span class="flex items-center gap-1"><span class="w-4 h-4 bg-orange-500 rounded"></span> High</span>
+                        <span class="flex items-center gap-1"><span class="w-4 h-4 bg-red-500 rounded"></span> Critical</span>
+                    </div>
+                </div>
+
+                <!-- SVG World Map -->
+                <div class="relative bg-gradient-to-b from-blue-50 to-blue-100 rounded-xl p-4 overflow-hidden">
+                    <svg viewBox="0 0 1000 500" class="w-full h-auto" id="world-map">
+                        <rect x="0" y="0" width="1000" height="500" fill="#e0f2fe"/>
+                        
+                        <!-- North America -->
+                        <path id="usa" class="map-country" d="M 80,120 L 240,120 L 260,160 L 240,200 L 180,210 L 120,200 L 90,160 Z" fill="#22c55e" data-country="US" data-name="United States"/>
+                        <path id="canada" class="map-country" d="M 60,60 L 260,60 L 270,100 L 240,120 L 80,120 L 60,90 Z" fill="#22c55e" data-country="CA" data-name="Canada"/>
+                        <path id="mexico" class="map-country" d="M 100,210 L 180,210 L 200,250 L 180,280 L 140,290 L 110,270 L 90,240 Z" fill="#eab308" data-country="MX" data-name="Mexico"/>
+
+                        <!-- South America -->
+                        <path id="brazil" class="map-country" d="M 220,310 L 290,300 L 310,360 L 280,410 L 230,400 L 210,350 Z" fill="#eab308" data-country="BR" data-name="Brazil"/>
+                        <path id="venezuela" class="map-country" d="M 200,280 L 250,275 L 260,300 L 230,310 L 205,300 Z" fill="#ef4444" data-country="VE" data-name="Venezuela"/>
+
+                        <!-- Europe -->
+                        <path id="uk" class="map-country" d="M 410,90 L 430,85 L 435,110 L 420,120 L 405,105 Z" fill="#22c55e" data-country="GB" data-name="United Kingdom"/>
+                        <path id="germany" class="map-country" d="M 470,100 L 500,95 L 510,125 L 490,140 L 465,130 Z" fill="#22c55e" data-country="DE" data-name="Germany"/>
+                        <path id="france" class="map-country" d="M 430,120 L 465,115 L 470,150 L 445,165 L 420,150 Z" fill="#22c55e" data-country="FR" data-name="France"/>
+                        <path id="russia" class="map-country" d="M 520,50 L 750,40 L 800,80 L 780,140 L 700,160 L 600,150 L 550,120 L 530,80 Z" fill="#ef4444" data-country="RU" data-name="Russia"/>
+                        <path id="turkey" class="map-country" d="M 530,160 L 590,155 L 610,180 L 580,200 L 530,195 L 520,175 Z" fill="#f97316" data-country="TR" data-name="Turkey"/>
+
+                        <!-- Africa -->
+                        <path id="nigeria" class="map-country" d="M 440,290 L 480,285 L 490,320 L 465,340 L 435,330 Z" fill="#f97316" data-country="NG" data-name="Nigeria"/>
+                        <path id="south-africa" class="map-country" d="M 480,380 L 530,375 L 540,410 L 510,430 L 475,415 Z" fill="#eab308" data-country="ZA" data-name="South Africa"/>
+
+                        <!-- Middle East -->
+                        <path id="uae" class="map-country" d="M 620,240 L 650,235 L 660,260 L 640,275 L 615,265 Z" fill="#eab308" data-country="AE" data-name="UAE"/>
+                        <path id="saudi" class="map-country" d="M 580,220 L 630,215 L 640,260 L 610,280 L 570,265 Z" fill="#eab308" data-country="SA" data-name="Saudi Arabia"/>
+                        <path id="iran" class="map-country" d="M 620,180 L 670,175 L 685,210 L 660,235 L 620,225 Z" fill="#ef4444" data-country="IR" data-name="Iran"/>
+
+                        <!-- Asia -->
+                        <path id="china" class="map-country" d="M 720,140 L 820,130 L 850,180 L 830,230 L 760,250 L 710,230 L 700,180 Z" fill="#eab308" data-country="CN" data-name="China"/>
+                        <path id="india" class="map-country" d="M 670,220 L 730,210 L 750,270 L 720,310 L 670,300 L 655,260 Z" fill="#eab308" data-country="IN" data-name="India"/>
+                        <path id="japan" class="map-country" d="M 870,150 L 900,145 L 910,180 L 890,200 L 865,185 Z" fill="#22c55e" data-country="JP" data-name="Japan"/>
+                        <path id="south-korea" class="map-country" d="M 850,170 L 870,168 L 875,190 L 860,200 L 845,188 Z" fill="#22c55e" data-country="KR" data-name="South Korea"/>
+                        <path id="north-korea" class="map-country" d="M 845,155 L 865,152 L 870,170 L 855,178 L 842,168 Z" fill="#ef4444" data-country="KP" data-name="North Korea"/>
+
+                        <!-- Southeast Asia -->
+                        <path id="thailand" class="map-country" d="M 770,290 L 800,285 L 810,320 L 790,345 L 765,330 Z" fill="#eab308" data-country="TH" data-name="Thailand"/>
+                        <path id="vietnam" class="map-country" d="M 810,285 L 835,280 L 845,320 L 830,350 L 805,335 Z" fill="#eab308" data-country="VN" data-name="Vietnam"/>
+                        <path id="philippines" class="map-country" d="M 860,300 L 885,295 L 895,335 L 875,355 L 855,340 Z" fill="#eab308" data-country="PH" data-name="Philippines"/>
+                        <path id="indonesia" class="map-country" d="M 780,360 L 880,350 L 900,390 L 860,420 L 780,410 L 760,385 Z" fill="#eab308" data-country="ID" data-name="Indonesia"/>
+                        <path id="malaysia" class="map-country" d="M 770,340 L 810,335 L 820,360 L 795,375 L 765,365 Z" fill="#eab308" data-country="MY" data-name="Malaysia"/>
+
+                        <!-- Singapore (Highlighted) -->
+                        <g id="singapore-group" class="singapore-highlight" data-country="SG" data-name="Singapore">
+                            <circle cx="795" cy="355" r="12" fill="#ef4444" stroke="#fff" stroke-width="2"/>
+                            <circle cx="795" cy="355" r="18" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.5"/>
+                            <circle cx="795" cy="355" r="24" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.3"/>
+                        </g>
+                        
+                        <!-- Hong Kong -->
+                        <circle id="hong-kong" class="map-country" cx="830" cy="245" r="6" fill="#eab308" stroke="#fff" stroke-width="2" data-country="HK" data-name="Hong Kong"/>
+
+                        <!-- Australia -->
+                        <path id="australia" class="map-country" d="M 820,400 L 940,390 L 970,450 L 920,480 L 840,470 L 810,440 Z" fill="#22c55e" data-country="AU" data-name="Australia"/>
+
+                        <!-- Labels -->
+                        <text x="160" y="165" class="text-xs fill-white font-bold pointer-events-none">USA</text>
+                        <text x="640" y="110" class="text-xs fill-white font-bold pointer-events-none">Russia</text>
+                        <text x="760" y="190" class="text-xs fill-white font-bold pointer-events-none">China</text>
+                        <text x="810" y="360" class="text-xs fill-red-600 font-bold pointer-events-none">SINGAPORE</text>
+                    </svg>
+
+                    <!-- Singapore Callout Box -->
+                    <div class="absolute top-4 right-4 bg-white rounded-xl shadow-lg p-4 w-64 border-2 border-red-500">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">🇸🇬</span>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Singapore</h4>
+                                <p class="text-xs text-gray-500">Primary Operations Hub</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Risk Level:</span>
+                                <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">LOW</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Risk Score:</span>
+                                <span class="font-bold text-gray-800">22/100</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Active Flags:</span>
+                                <span class="font-bold text-gray-800">8</span>
+                            </div>
+                        </div>
+                        <button onclick="selectCountryFromMap('SG')" class="mt-3 w-full bg-red-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition">
+                            View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Region Selection Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="region-cards-map">
+            </div>
+
+            <!-- Selected Country Details -->
+            <div id="selected-details" class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <span class="text-4xl" id="detail-flag">🇸🇬</span>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800" id="detail-name">Singapore</h3>
+                            <p class="text-gray-500" id="detail-region">Asia Pacific</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-green-600" id="detail-score">22</div>
+                        <p class="text-sm text-gray-500">Risk Score</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="text-2xl font-bold text-gray-800">8</div>
+                        <p class="text-sm text-gray-500">Active Red Flags</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="text-2xl font-bold text-green-600">LOW</div>
+                        <p class="text-sm text-gray-500">Risk Level</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="text-2xl font-bold text-gray-800">$2.4B</div>
+                        <p class="text-sm text-gray-500">Transaction Volume</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="text-2xl font-bold text-blue-600">98.5%</div>
+                        <p class="text-sm text-gray-500">Compliance Rate</p>
+                    </div>
+                </div>
+
+                <!-- Singapore Regulatory Requirements -->
+                <h4 class="font-bold text-gray-800 mt-6 mb-4">Singapore Regulatory Requirements</h4>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="border rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fas fa-landmark text-blue-500"></i>
+                            <span class="font-semibold text-gray-800">MAS Regulations</span>
+                        </div>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li>• Notice 626 - AML/CFT</li>
+                            <li>• Notice 644 - Technology Risk Management</li>
+                            <li>• PDPA Compliance</li>
+                        </ul>
+                    </div>
+                    <div class="border rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fas fa-check-circle text-green-500"></i>
+                            <span class="font-semibold text-gray-800">Compliance Status</span>
+                        </div>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li>✓ Annual MAS Audit - Passed</li>
+                            <li>✓ FATF Mutual Evaluation - Compliant</li>
+                            <li>✓ ISO 27001 Certified</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Asia Pacific Countries Quick Select -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h4 class="font-bold text-gray-800 mb-4">
+                    <i class="fas fa-globe-asia text-blue-500 mr-2"></i>
+                    Asia Pacific Countries
+                </h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3" id="asia-countries">
+                </div>
+            </div>
+        </div>
+
+        <!-- Red Flags List View -->
+        <div id="redflags-view" class="space-y-6 hidden">
+            <!-- Category Filter -->
+            <div class="flex flex-wrap gap-2" id="category-filters"></div>
+
+            <!-- Red Flags Grid -->
+            <div class="grid gap-6" id="redflags-grid"></div>
+        </div>
+
+        <!-- Heatmap View -->
+        <div id="heatmap-view" class="space-y-6 hidden">
+            <!-- Category Severity Heatmap -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">
+                        <i class="fas fa-th text-blue-500 mr-2"></i>
+                        Red Flag Severity by Category
+                    </h3>
+                    <div class="flex items-center gap-4 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-4 h-4 bg-green-500 rounded"></span> Low</span>
+                        <span class="flex items-center gap-1"><span class="w-4 h-4 bg-yellow-500 rounded"></span> Medium</span>
+                        <span class="flex items-center gap-1"><span class="w-4 h-4 bg-orange-500 rounded"></span> High</span>
+                        <span class="flex items-center gap-1"><span class="w-4 h-4 bg-red-500 rounded"></span> Critical</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full" id="severity-heatmap"></table>
+                </div>
+            </div>
+
+            <!-- Time-based Heatmap -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">
+                        <i class="fas fa-clock text-purple-500 mr-2"></i>
+                        Incident Frequency by Day & Hour
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full" id="time-heatmap"></table>
+                </div>
+            </div>
+
+            <!-- Summary Statistics Table -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-table text-indigo-500 mr-2"></i>
+                    Red Flag Summary Statistics
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm" id="summary-table">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Category</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Total Flags</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Critical</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">High</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Medium</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Low</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Trend</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Risk Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Country Risk View -->
+        <div id="country-view" class="space-y-6 hidden">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="region-cards"></div>
+
+            <!-- Country Risk Table -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+                    <h3 class="text-xl font-bold text-gray-800">
+                        <i class="fas fa-flag text-red-500 mr-2"></i>
+                        Country Risk Assessment
+                    </h3>
+                    <div class="flex items-center gap-3">
+                        <select class="border rounded-lg px-3 py-2 text-sm" id="region-filter">
+                            <option value="all">All Regions</option>
+                            <option value="asia">Asia Pacific</option>
+                            <option value="europe">Europe</option>
+                            <option value="namerica">North America</option>
+                            <option value="samerica">South America</option>
+                            <option value="africa">Africa</option>
+                            <option value="meast">Middle East</option>
+                        </select>
+                        <select class="border rounded-lg px-3 py-2 text-sm" id="risk-level-filter">
+                            <option value="all">All Risk Levels</option>
+                            <option value="critical">Critical Only</option>
+                            <option value="high">High & Above</option>
+                            <option value="medium">Medium & Above</option>
+                        </select>
+                        <input type="text" placeholder="Search country..." class="border rounded-lg px-3 py-2 text-sm" id="country-search">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Country</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Region</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Risk Level</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Risk Score</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Active Flags</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Trend</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Key Concerns</th>
+                            </tr>
+                        </thead>
+                        <tbody id="country-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sanctioned & Watchlist -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-gradient-to-br from-red-50 to-white rounded-2xl shadow-lg p-6 border border-red-200">
+                    <h3 class="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-ban text-red-500"></i>
+                        Sanctioned Countries
+                    </h3>
+                    <div class="space-y-2" id="sanctioned-countries"></div>
+                </div>
+                <div class="bg-gradient-to-br from-orange-50 to-white rounded-2xl shadow-lg p-6 border border-orange-200">
+                    <h3 class="text-lg font-bold text-orange-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-eye text-orange-500"></i>
+                        Enhanced Due Diligence Required
+                    </h3>
+                    <div class="space-y-2" id="watchlist-countries"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flow Chart View -->
+        <div id="flowchart-view" class="hidden">
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 text-center">Red Flag Detection & Response System Flow</h3>
+                
+                <div class="space-y-4">
+                    <!-- Layer 1: Data Sources -->
+                    <div class="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-slate-600 mb-3 text-center">DATA SOURCES</h4>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-users text-blue-500 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">People Monitoring</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-cogs text-purple-500 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Process Audit</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-server text-orange-500 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Technology Systems</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <i class="fas fa-database text-emerald-500 text-sm"></i>
+                                <span class="text-xs font-medium text-slate-700">Data Protection</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Layer 2: Detection Engine -->
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-blue-600 mb-3 text-center">DETECTION ENGINE</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="bg-white rounded-lg p-3 shadow-sm text-center">
+                                <i class="fas fa-chart-line text-blue-500 text-lg mb-1"></i>
+                                <span class="text-xs font-medium text-gray-700 block">Real-time Monitoring</span>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 shadow-sm text-center">
+                                <i class="fas fa-search text-blue-500 text-lg mb-1"></i>
+                                <span class="text-xs font-medium text-gray-700 block">Behavior Analysis</span>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 shadow-sm text-center">
+                                <i class="fas fa-bolt text-blue-500 text-lg mb-1"></i>
+                                <span class="text-xs font-medium text-gray-700 block">AI/ML Models</span>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 shadow-sm text-center">
+                                <i class="fas fa-crosshairs text-blue-500 text-lg mb-1"></i>
+                                <span class="text-xs font-medium text-gray-700 block">Rule Engine</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Layer 3: Red Flag Categories -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-gradient-to-b from-blue-100 to-white rounded-xl p-4 border border-blue-200 text-center">
+                            <i class="fas fa-users text-blue-500 text-2xl mb-2"></i>
+                            <h4 class="font-semibold text-blue-700">People</h4>
+                            <p class="text-xs text-gray-500 mt-1">5 Red Flags</p>
+                        </div>
+                        <div class="bg-gradient-to-b from-purple-100 to-white rounded-xl p-4 border border-purple-200 text-center">
+                            <i class="fas fa-cogs text-purple-500 text-2xl mb-2"></i>
+                            <h4 class="font-semibold text-purple-700">Process</h4>
+                            <p class="text-xs text-gray-500 mt-1">8 Red Flags</p>
+                        </div>
+                        <div class="bg-gradient-to-b from-orange-100 to-white rounded-xl p-4 border border-orange-200 text-center">
+                            <i class="fas fa-server text-orange-500 text-2xl mb-2"></i>
+                            <h4 class="font-semibold text-orange-700">Technology</h4>
+                            <p class="text-xs text-gray-500 mt-1">6 Red Flags</p>
+                        </div>
+                        <div class="bg-gradient-to-b from-emerald-100 to-white rounded-xl p-4 border border-emerald-200 text-center">
+                            <i class="fas fa-database text-emerald-500 text-2xl mb-2"></i>
+                            <h4 class="font-semibold text-emerald-700">Data</h4>
+                            <p class="text-xs text-gray-500 mt-1">1 Red Flag</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Layer 4: Alert Classification -->
+                    <div class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-amber-600 mb-3 text-center">ALERT CLASSIFICATION</h4>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <div class="flex items-center gap-2 bg-red-100 px-4 py-2 rounded-full">
+                                <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                                <span class="text-sm font-semibold text-red-700">Critical (6)</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-orange-100 px-4 py-2 rounded-full">
+                                <span class="w-3 h-3 bg-orange-500 rounded-full"></span>
+                                <span class="text-sm font-semibold text-orange-700">High (5)</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-yellow-100 px-4 py-2 rounded-full">
+                                <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                                <span class="text-sm font-semibold text-yellow-700">Medium (4)</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-blue-100 px-4 py-2 rounded-full">
+                                <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
+                                <span class="text-sm font-semibold text-blue-700">Low (2)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Response Actions -->
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="bg-gradient-to-b from-red-50 to-white rounded-xl p-4 border border-red-200">
+                            <h4 class="text-sm font-semibold text-red-600 mb-3 text-center">IMMEDIATE RESPONSE</h4>
+                            <ul class="text-xs text-gray-600 space-y-2">
+                                <li class="flex items-center gap-2"><i class="fas fa-check-circle text-red-500"></i>Block unauthorized access</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-check-circle text-red-500"></i>Revoke compromised credentials</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-check-circle text-red-500"></i>Isolate affected systems</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-check-circle text-red-500"></i>Contain data leakage</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gradient-to-b from-purple-50 to-white rounded-xl p-4 border border-purple-200">
+                            <h4 class="text-sm font-semibold text-purple-600 mb-3 text-center">NOTIFICATION</h4>
+                            <ul class="text-xs text-gray-600 space-y-2">
+                                <li class="flex items-center gap-2"><i class="fas fa-bell text-purple-500"></i>Alert Security Operations</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-bell text-purple-500"></i>Notify IT Management</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-bell text-purple-500"></i>Escalate to CISO</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-bell text-purple-500"></i>Inform Compliance Team</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gradient-to-b from-green-50 to-white rounded-xl p-4 border border-green-200">
+                            <h4 class="text-sm font-semibold text-green-600 mb-3 text-center">DOCUMENTATION</h4>
+                            <ul class="text-xs text-gray-600 space-y-2">
+                                <li class="flex items-center gap-2"><i class="fas fa-file-alt text-green-500"></i>Log incident details</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-file-alt text-green-500"></i>Capture evidence</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-file-alt text-green-500"></i>Create audit trail</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-file-alt text-green-500"></i>Generate reports</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Investigation Flow -->
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-indigo-600 mb-3 text-center">INVESTIGATION & RESOLUTION</h4>
+                        <div class="flex flex-wrap justify-center items-center gap-2">
+                            <div class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Assign</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Investigate</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-violet-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Analyze</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-fuchsia-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Remediate</div>
+                            <i class="fas fa-arrow-right text-gray-400 hidden sm:block"></i>
+                            <div class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">Close</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <i class="fas fa-arrow-down text-gray-400 text-xl"></i>
+                    </div>
+
+                    <!-- Continuous Improvement -->
+                    <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-emerald-600 mb-3 text-center">CONTINUOUS IMPROVEMENT</h4>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <div class="bg-white rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-sync-alt text-emerald-500"></i>
+                                <span class="text-xs font-medium">Update Detection Rules</span>
+                            </div>
+                            <div class="bg-white rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-graduation-cap text-emerald-500"></i>
+                                <span class="text-xs font-medium">Security Training</span>
+                            </div>
+                            <div class="bg-white rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-shield-alt text-emerald-500"></i>
+                                <span class="text-xs font-medium">Penetration Testing</span>
+                            </div>
+                            <div class="bg-white rounded-lg px-4 py-2 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-chart-bar text-emerald-500"></i>
+                                <span class="text-xs font-medium">KPI Review</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Escalation Matrix -->
+                <div class="mt-8">
+                    <h4 class="font-bold text-gray-800 mb-4">Escalation Matrix</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Severity</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Example Red Flags</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Response Time</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Escalate To</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-t">
+                                    <td class="px-4 py-3"><span class="px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium text-xs">Critical</span></td>
+                                    <td class="px-4 py-3 text-gray-600">Data Leakage, Unauthorized Production Change, Encryption Key Leakage</td>
+                                    <td class="px-4 py-3 text-gray-600">Immediate (15 min)</td>
+                                    <td class="px-4 py-3 text-gray-600">CISO, CTO, Executive Team</td>
+                                </tr>
+                                <tr class="border-t">
+                                    <td class="px-4 py-3"><span class="px-3 py-1 bg-orange-100 text-orange-800 rounded-full font-medium text-xs">High</span></td>
+                                    <td class="px-4 py-3 text-gray-600">Shadow IT, No MFA, Missed Security Patches, EOS Software</td>
+                                    <td class="px-4 py-3 text-gray-600">1 Hour</td>
+                                    <td class="px-4 py-3 text-gray-600">IT Security Manager, IT Director</td>
+                                </tr>
+                                <tr class="border-t">
+                                    <td class="px-4 py-3"><span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium text-xs">Medium</span></td>
+                                    <td class="px-4 py-3 text-gray-600">Password Sharing, Tailgating, Misconfiguration, No Regular Pentest</td>
+                                    <td class="px-4 py-3 text-gray-600">4 Hours</td>
+                                    <td class="px-4 py-3 text-gray-600">Security Team Lead</td>
+                                </tr>
+                                <tr class="border-t">
+                                    <td class="px-4 py-3"><span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-xs">Low</span></td>
+                                    <td class="px-4 py-3 text-gray-600">Endpoint without updates, Lack of vendor due diligence</td>
+                                    <td class="px-4 py-3 text-gray-600">24 Hours</td>
+                                    <td class="px-4 py-3 text-gray-600">Security Analyst</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800/30 border-t border-slate-700 mt-8">
+        <div class="max-w-7xl mx-auto px-4 py-4 text-center text-sm text-slate-500">
+            Bank Reputation Risk Monitor • Red Flag Detection & Response System • Singapore Operations
+        </div>
+    </footer>
+
+    <script>
+        // Updated Red Flag Categories - People, Process, Technology, Data
+        const redFlagCategories = [
+            {
+                id: 'people',
+                name: 'People',
+                icon: 'fa-users',
+                color: 'blue',
+                count: 5,
+                critical: 2,
+                high: 1,
+                medium: 2,
+                low: 0,
+                trend: 'up',
+                riskScore: 68,
+                description: 'Human-related security risks and behavioral red flags',
+                flags: [
+                    { name: 'Shadow IT', severity: 'high', description: 'Use of unauthorized applications, software, or cloud services without IT approval' },
+                    { name: 'Sharing Password', severity: 'medium', description: 'Employees sharing login credentials with colleagues or third parties' },
+                    { name: 'Tailgating into Secure Room / Data Centre', severity: 'medium', description: 'Unauthorized physical access by following authorized personnel' },
+                    { name: 'Unauthorized Change in Production', severity: 'critical', description: 'Making changes to production systems without proper approval or change management' },
+                    { name: 'Falling for Scams', severity: 'critical', description: 'Employees being victims of phishing, social engineering, or fraud attempts' },
+                ]
+            },
+            {
+                id: 'process',
+                name: 'Process',
+                icon: 'fa-cogs',
+                color: 'purple',
+                count: 8,
+                critical: 3,
+                high: 2,
+                medium: 2,
+                low: 1,
+                trend: 'stable',
+                riskScore: 72,
+                description: 'Procedural gaps and operational security risks',
+                flags: [
+                    { name: 'Encryption Key Leakage', severity: 'critical', description: 'Exposure or compromise of cryptographic keys used for data protection' },
+                    { name: 'Unauthorized Change', severity: 'critical', description: 'Changes made without following proper change management procedures' },
+                    { name: 'No MFA for External-Facing Systems', severity: 'high', description: 'External systems accessible without multi-factor authentication' },
+                    { name: 'Misconfiguration or Lack of Hardening', severity: 'high', description: 'Systems not properly configured according to security baselines' },
+                    { name: 'Running EOS Software / Component', severity: 'medium', description: 'Using end-of-support software that no longer receives security updates' },
+                    { name: 'Endpoint Without Antivirus, DLP Signature Updates', severity: 'medium', description: 'Endpoints running outdated security signatures or missing protection' },
+                    { name: 'No Regular Pentest or NVA', severity: 'low', description: 'Lack of regular penetration testing or network vulnerability assessments' },
+                    { name: 'Lack of Vendor Due Diligence', severity: 'critical', description: 'Third-party vendors not properly vetted for security compliance' },
+                ]
+            },
+            {
+                id: 'technology',
+                name: 'Technology',
+                icon: 'fa-server',
+                color: 'orange',
+                count: 6,
+                critical: 2,
+                high: 2,
+                medium: 1,
+                low: 1,
+                trend: 'up',
+                riskScore: 75,
+                description: 'Technical vulnerabilities and system risks',
+                flags: [
+                    { name: 'Shadow IT', severity: 'high', description: 'Unauthorized technology deployments outside IT governance' },
+                    { name: 'Missed Security Patches', severity: 'high', description: 'Systems running without critical security patches applied' },
+                    { name: 'Tailgating into Secure Rooms', severity: 'medium', description: 'Physical security bypass at technology facilities' },
+                    { name: 'Unauthorized Change', severity: 'critical', description: 'Unauthorized modifications to technology infrastructure' },
+                    { name: 'Unscheduled Downtime', severity: 'critical', description: 'System outages not planned or communicated properly' },
+                    { name: 'No MFA for External-Facing Systems', severity: 'low', description: 'Internet-facing systems without multi-factor authentication' },
+                ]
+            },
+            {
+                id: 'data',
+                name: 'Data',
+                icon: 'fa-database',
+                color: 'emerald',
+                count: 1,
+                critical: 1,
+                high: 0,
+                medium: 0,
+                low: 0,
+                trend: 'down',
+                riskScore: 85,
+                description: 'Data protection and information security risks',
+                flags: [
+                    { name: 'Data Leakage', severity: 'critical', description: 'Unauthorized disclosure, transfer, or exposure of sensitive data including PII, financial records, or proprietary information' },
+                ]
+            }
+        ];
+
+        // Recent Alerts - Updated with new red flags
+        const recentAlerts = [
+            { id: 1, type: 'Data Leakage Detected', severity: 'critical', time: '5 min ago', status: 'active', category: 'Data' },
+            { id: 2, type: 'Shadow IT Discovery', severity: 'high', time: '15 min ago', status: 'investigating', category: 'People' },
+            { id: 3, type: 'Missed Security Patches', severity: 'high', time: '32 min ago', status: 'active', category: 'Technology' },
+            { id: 4, type: 'Tailgating Attempt', severity: 'medium', time: '1 hr ago', status: 'contained', category: 'People' },
+            { id: 5, type: 'No MFA Detected', severity: 'high', time: '2 hrs ago', status: 'pending', category: 'Process' },
+            { id: 6, type: 'EOS Software Running', severity: 'medium', time: '3 hrs ago', status: 'investigating', category: 'Process' },
+            { id: 7, type: 'Unauthorized Production Change', severity: 'critical', time: '4 hrs ago', status: 'resolved', category: 'People' },
+        ];
+
+        // Country Risk Data
+        const countryRiskData = [
+            { country: 'Singapore', code: 'SG', region: 'asia', riskLevel: 'low', riskScore: 22, flags: 8, trend: 'down', concerns: ['Regional exposure'], isPrimary: true },
+            { country: 'United States', code: 'US', region: 'namerica', riskLevel: 'low', riskScore: 25, flags: 12, trend: 'stable', concerns: ['Cyber threats'] },
+            { country: 'United Kingdom', code: 'GB', region: 'europe', riskLevel: 'low', riskScore: 28, flags: 15, trend: 'stable', concerns: ['Fraud patterns'] },
+            { country: 'China', code: 'CN', region: 'asia', riskLevel: 'medium', riskScore: 58, flags: 34, trend: 'up', concerns: ['Capital controls', 'Regulatory changes'] },
+            { country: 'Malaysia', code: 'MY', region: 'asia', riskLevel: 'low', riskScore: 32, flags: 14, trend: 'stable', concerns: ['Cross-border transactions'] },
+            { country: 'Indonesia', code: 'ID', region: 'asia', riskLevel: 'medium', riskScore: 50, flags: 24, trend: 'down', concerns: ['Terrorism financing'] },
+            { country: 'Thailand', code: 'TH', region: 'asia', riskLevel: 'medium', riskScore: 48, flags: 21, trend: 'stable', concerns: ['Human trafficking'] },
+            { country: 'Vietnam', code: 'VN', region: 'asia', riskLevel: 'medium', riskScore: 52, flags: 23, trend: 'down', concerns: ['Cyber fraud'] },
+            { country: 'Philippines', code: 'PH', region: 'asia', riskLevel: 'medium', riskScore: 54, flags: 26, trend: 'stable', concerns: ['Online gambling'] },
+            { country: 'Hong Kong', code: 'HK', region: 'asia', riskLevel: 'medium', riskScore: 45, flags: 19, trend: 'up', concerns: ['China exposure'] },
+            { country: 'Japan', code: 'JP', region: 'asia', riskLevel: 'low', riskScore: 24, flags: 9, trend: 'down', concerns: ['Aging infrastructure'] },
+            { country: 'South Korea', code: 'KR', region: 'asia', riskLevel: 'low', riskScore: 28, flags: 12, trend: 'stable', concerns: ['Crypto regulations'] },
+            { country: 'India', code: 'IN', region: 'asia', riskLevel: 'medium', riskScore: 52, flags: 28, trend: 'stable', concerns: ['Digital fraud', 'KYC challenges'] },
+            { country: 'Australia', code: 'AU', region: 'asia', riskLevel: 'low', riskScore: 23, flags: 10, trend: 'stable', concerns: ['Cyber threats'] },
+            { country: 'Russia', code: 'RU', region: 'europe', riskLevel: 'critical', riskScore: 92, flags: 67, trend: 'up', concerns: ['Sanctions', 'AML'] },
+            { country: 'Iran', code: 'IR', region: 'meast', riskLevel: 'critical', riskScore: 98, flags: 0, trend: 'stable', concerns: ['Comprehensive sanctions'] },
+            { country: 'North Korea', code: 'KP', region: 'asia', riskLevel: 'critical', riskScore: 99, flags: 0, trend: 'stable', concerns: ['Comprehensive sanctions'] },
+        ];
+
+        // Sanctioned Countries
+        const sanctionedCountries = [
+            { name: 'North Korea', code: 'KP', type: 'Comprehensive' },
+            { name: 'Iran', code: 'IR', type: 'Comprehensive' },
+            { name: 'Syria', code: 'SY', type: 'Comprehensive' },
+            { name: 'Russia', code: 'RU', type: 'Sectoral' },
+        ];
+
+        // Watchlist Countries
+        const watchlistCountries = [
+            { name: 'Myanmar', reason: 'FATF High-Risk' },
+            { name: 'Pakistan', reason: 'FATF Grey List' },
+            { name: 'Nigeria', reason: 'High Fraud Risk' },
+        ];
+
+        // Region Data
+        const regionData = [
+            { id: 'asia', name: 'Asia Pacific', icon: 'fa-globe-asia', riskScore: 48, countries: 12, flags: 198, color: 'blue' },
+            { id: 'europe', name: 'Europe', icon: 'fa-globe-europe', riskScore: 42, countries: 8, flags: 156, color: 'green' },
+            { id: 'namerica', name: 'North America', icon: 'fa-globe-americas', riskScore: 32, countries: 3, flags: 56, color: 'emerald' },
+            { id: 'samerica', name: 'South America', icon: 'fa-globe-americas', riskScore: 58, countries: 5, flags: 89, color: 'yellow' },
+            { id: 'africa', name: 'Africa', icon: 'fa-globe-africa', riskScore: 65, countries: 6, flags: 124, color: 'orange' },
+            { id: 'meast', name: 'Middle East', icon: 'fa-globe-europe', riskScore: 62, countries: 8, flags: 112, color: 'red' },
+        ];
+
+        // Time Heatmap Data
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const hours = ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24'];
+        
+        function generateTimeHeatmapData() {
+            const data = {};
+            days.forEach(day => {
+                data[day] = {};
+                hours.forEach(hour => {
+                    let base = Math.random() * 30;
+                    if (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day)) {
+                        if (['08-12', '12-16', '16-20'].includes(hour)) base += 40;
+                    }
+                    data[day][hour] = Math.round(base);
+                });
+            });
+            return data;
+        }
+        const timeHeatmapData = generateTimeHeatmapData();
+
+        // Color mappings
+        const colorMappings = {
+            blue: { gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-50 border-blue-200', text: 'text-blue-500', bgSolid: 'bg-blue-500' },
+            purple: { gradient: 'from-purple-500 to-purple-600', bg: 'bg-purple-50 border-purple-200', text: 'text-purple-500', bgSolid: 'bg-purple-500' },
+            orange: { gradient: 'from-orange-500 to-orange-600', bg: 'bg-orange-50 border-orange-200', text: 'text-orange-500', bgSolid: 'bg-orange-500' },
+            emerald: { gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-500', bgSolid: 'bg-emerald-500' },
+            red: { gradient: 'from-red-500 to-red-600', bg: 'bg-red-50 border-red-200', text: 'text-red-500', bgSolid: 'bg-red-500' },
+            yellow: { gradient: 'from-yellow-500 to-yellow-600', bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-500', bgSolid: 'bg-yellow-500' },
+            green: { gradient: 'from-green-500 to-green-600', bg: 'bg-green-50 border-green-200', text: 'text-green-500', bgSolid: 'bg-green-500' },
+        };
+
+        const severityColors = {
+            critical: { bg: 'bg-red-500', bgLight: 'bg-red-50 border-red-200 text-red-800' },
+            high: { bg: 'bg-orange-500', bgLight: 'bg-orange-50 border-orange-200 text-orange-800' },
+            medium: { bg: 'bg-yellow-500', bgLight: 'bg-yellow-50 border-yellow-200 text-yellow-800' },
+            low: { bg: 'bg-blue-500', bgLight: 'bg-blue-50 border-blue-200 text-blue-800' },
+        };
+
+        const statusColors = {
+            active: 'bg-red-500/20 text-red-400',
+            investigating: 'bg-yellow-500/20 text-yellow-400',
+            contained: 'bg-blue-500/20 text-blue-400',
+            pending: 'bg-slate-600 text-slate-300',
+            resolved: 'bg-green-500/20 text-green-400',
+        };
+
+        let selectedCategory = null;
+        let selectedCountry = 'SG';
+
+        // Initialize
+        function init() {
+            renderRecentAlerts();
+            renderCategoryFilters();
+            renderRedFlagsGrid();
+            renderSeverityHeatmap();
+            renderTimeHeatmap();
+            renderSummaryTable();
+            renderRegionCards();
+            renderCountryTable();
+            renderSanctionedCountries();
+            renderWatchlistCountries();
+            renderAsiaCountries();
+            setupCountryFilters();
+            setupMapInteractions();
+        }
+
+        // Switch Tab
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tabId) btn.classList.add('active');
+            });
+            ['dashboard', 'worldmap', 'redflags', 'heatmap', 'country', 'flowchart'].forEach(id => {
+                document.getElementById(`${id}-view`).classList.add('hidden');
+            });
+            document.getElementById(`${tabId}-view`).classList.remove('hidden');
+        }
+
+        // Setup Map Interactions
+        function setupMapInteractions() {
+            document.querySelectorAll('.map-country').forEach(el => {
+                el.addEventListener('click', function() {
+                    const countryCode = this.dataset.country;
+                    if (countryCode) selectCountryFromMap(countryCode);
+                });
+            });
+        }
+
+        // Select Country from Map
+        function selectCountryFromMap(countryCode) {
+            selectedCountry = countryCode;
+            const country = countryRiskData.find(c => c.code === countryCode);
+            if (country) {
+                document.getElementById('detail-flag').textContent = getFlagEmoji(country.code);
+                document.getElementById('detail-name').textContent = country.country;
+                document.getElementById('detail-region').textContent = getRegionName(country.region);
+                document.getElementById('detail-score').textContent = country.riskScore;
+                document.getElementById('selected-location').textContent = country.country;
+            }
+        }
+
+        // Select Region
+        function selectRegion(regionId) {
+            document.getElementById('region-filter').value = regionId;
+            renderCountryTable({ region: regionId });
+            switchTab('country');
+        }
+
+        // Render Asia Countries
+        function renderAsiaCountries() {
+            const container = document.getElementById('asia-countries');
+            const asiaCountries = countryRiskData.filter(c => c.region === 'asia');
+            container.innerHTML = asiaCountries.map(country => `
+                <div onclick="selectCountryFromMap('${country.code}')" class="flex items-center gap-2 p-3 rounded-xl border cursor-pointer hover:shadow-md transition-all ${country.code === 'SG' ? 'border-red-500 bg-red-50' : 'border-gray-200'}">
+                    <span class="text-xl">${getFlagEmoji(country.code)}</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-800 text-sm truncate">${country.country}</p>
+                        <p class="text-xs ${country.riskLevel === 'critical' ? 'text-red-600' : country.riskLevel === 'high' ? 'text-orange-600' : country.riskLevel === 'medium' ? 'text-yellow-600' : 'text-green-600'}">${country.riskLevel.toUpperCase()}</p>
+                    </div>
+                    <span class="text-sm font-bold text-gray-600">${country.riskScore}</span>
+                </div>
+            `).join('');
+        }
+
+        // Render Recent Alerts
+        function renderRecentAlerts() {
+            const container = document.getElementById('recent-alerts');
+            container.innerHTML = recentAlerts.map(alert => `
+                <div class="p-4 hover:bg-slate-700/30 cursor-pointer transition-colors">
+                    <div class="flex items-start gap-3">
+                        <span class="w-3 h-3 rounded-full mt-1 ${severityColors[alert.severity].bg} ${alert.severity === 'critical' ? 'animate-pulse' : ''}"></span>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-sm font-medium text-white">${alert.type}</p>
+                                <span class="text-xs px-2 py-0.5 rounded ${alert.category === 'People' ? 'bg-blue-500/20 text-blue-400' : alert.category === 'Process' ? 'bg-purple-500/20 text-purple-400' : alert.category === 'Technology' ? 'bg-orange-500/20 text-orange-400' : 'bg-emerald-500/20 text-emerald-400'}">${alert.category}</span>
+                            </div>
+                            <p class="text-xs text-slate-400">${alert.time}</p>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full ${statusColors[alert.status]}">${alert.status}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Category Filters
+        function renderCategoryFilters() {
+            const container = document.getElementById('category-filters');
+            container.innerHTML = `
+                <button onclick="filterCategory(null)" class="category-btn ${!selectedCategory ? 'active' : ''} px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 text-slate-300 hover:bg-slate-600">All Categories</button>
+                ${redFlagCategories.map(cat => `
+                    <button onclick="filterCategory('${cat.id}')" class="category-btn ${selectedCategory === cat.id ? 'active' : ''} px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 bg-slate-700 text-slate-300 hover:bg-slate-600">
+                        <i class="fas ${cat.icon}"></i>${cat.name}
+                        <span class="bg-slate-600 text-xs px-1.5 rounded">${cat.count}</span>
+                    </button>
+                `).join('')}
+            `;
+        }
+
+        // Render Red Flags Grid
+        function renderRedFlagsGrid(filterId = null) {
+            const container = document.getElementById('redflags-grid');
+            const categories = filterId ? redFlagCategories.filter(c => c.id === filterId) : redFlagCategories;
+            container.innerHTML = categories.map(category => `
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r ${colorMappings[category.color].gradient} p-4">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div class="flex items-center gap-3">
+                                <i class="fas ${category.icon} text-white text-xl"></i>
+                                <div>
+                                    <h3 class="text-lg font-bold text-white">${category.name}</h3>
+                                    <p class="text-sm text-white/80">${category.description}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="bg-white/20 text-white px-3 py-1 rounded-full text-sm">${category.count} flags</span>
+                                ${category.critical > 0 ? `<span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm animate-pulse">${category.critical} critical</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${category.flags.map((flag, idx) => `
+                                <div class="${severityColors[flag.severity].bgLight} rounded-xl p-4 border cursor-pointer hover:shadow-md transition-all">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <span class="w-3 h-3 rounded-full ${severityColors[flag.severity].bg} ${flag.severity === 'critical' ? 'animate-pulse' : ''}"></span>
+                                        <span class="text-xs font-medium uppercase px-2 py-0.5 rounded ${flag.severity === 'critical' ? 'bg-red-200' : flag.severity === 'high' ? 'bg-orange-200' : flag.severity === 'medium' ? 'bg-yellow-200' : 'bg-blue-200'}">${flag.severity}</span>
+                                    </div>
+                                    <h4 class="font-semibold text-sm mb-2">${flag.name}</h4>
+                                    <p class="text-xs opacity-75 leading-relaxed">${flag.description}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getHeatmapColor(value, max = 100) {
+            const pct = value / max;
+            if (pct < 0.25) return 'bg-green-500';
+            if (pct < 0.5) return 'bg-yellow-500';
+            if (pct < 0.75) return 'bg-orange-500';
+            return 'bg-red-500';
+        }
+
+        function renderSeverityHeatmap() {
+            const container = document.getElementById('severity-heatmap');
+            container.innerHTML = `
+                <thead><tr>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Category</th>
+                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Critical</th>
+                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">High</th>
+                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Medium</th>
+                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Low</th>
+                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Total</th>
+                </tr></thead>
+                <tbody>
+                    ${redFlagCategories.map(cat => `
+                        <tr class="border-t">
+                            <td class="px-3 py-3 text-sm font-medium text-gray-700"><i class="fas ${cat.icon} ${colorMappings[cat.color].text} mr-2"></i>${cat.name}</td>
+                            <td class="px-3 py-3 text-center"><div class="heatmap-cell inline-flex items-center justify-center w-10 h-8 ${getHeatmapColor(cat.critical, 5)} rounded text-white text-xs font-bold">${cat.critical}</div></td>
+                            <td class="px-3 py-3 text-center"><div class="heatmap-cell inline-flex items-center justify-center w-10 h-8 ${getHeatmapColor(cat.high, 5)} rounded text-white text-xs font-bold">${cat.high}</div></td>
+                            <td class="px-3 py-3 text-center"><div class="heatmap-cell inline-flex items-center justify-center w-10 h-8 ${getHeatmapColor(cat.medium, 5)} rounded text-white text-xs font-bold">${cat.medium}</div></td>
+                            <td class="px-3 py-3 text-center"><div class="heatmap-cell inline-flex items-center justify-center w-10 h-8 ${getHeatmapColor(cat.low, 5)} rounded text-white text-xs font-bold">${cat.low}</div></td>
+                            <td class="px-3 py-3 text-center font-bold text-gray-800">${cat.count}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+        }
+
+        function renderTimeHeatmap() {
+            const container = document.getElementById('time-heatmap');
+            container.innerHTML = `
+                <thead><tr>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Day / Hour</th>
+                    ${hours.map(h => `<th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">${h}</th>`).join('')}
+                </tr></thead>
+                <tbody>
+                    ${days.map(day => `
+                        <tr class="border-t">
+                            <td class="px-3 py-3 text-sm font-medium text-gray-700">${day}</td>
+                            ${hours.map(hour => `
+                                <td class="px-3 py-3 text-center"><div class="heatmap-cell inline-flex items-center justify-center w-10 h-8 ${getHeatmapColor(timeHeatmapData[day][hour], 80)} rounded text-white text-xs font-bold">${timeHeatmapData[day][hour]}</div></td>
+                            `).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+        }
+
+        function renderSummaryTable() {
+            const container = document.getElementById('summary-table-body');
+            container.innerHTML = redFlagCategories.map(cat => `
+                <tr class="border-t hover:bg-gray-50">
+                    <td class="px-4 py-3"><i class="fas ${cat.icon} ${colorMappings[cat.color].text} mr-2"></i><span class="font-medium">${cat.name}</span></td>
+                    <td class="px-4 py-3 text-center font-bold">${cat.count}</td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">${cat.critical}</span></td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">${cat.high}</span></td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">${cat.medium}</span></td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">${cat.low}</span></td>
+                    <td class="px-4 py-3 text-center">${cat.trend === 'up' ? '<i class="fas fa-arrow-up text-red-500"></i>' : cat.trend === 'down' ? '<i class="fas fa-arrow-down text-green-500"></i>' : '<i class="fas fa-minus text-gray-400"></i>'}</td>
+                    <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="flex-1 h-2 bg-gray-200 rounded-full"><div class="h-full ${cat.riskScore > 75 ? 'bg-red-500' : cat.riskScore > 50 ? 'bg-orange-500' : 'bg-green-500'} rounded-full" style="width:${cat.riskScore}%"></div></div><span class="text-xs font-medium">${cat.riskScore}</span></div></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderRegionCards() {
+            const container = document.getElementById('region-cards');
+            if (!container) return;
+            container.innerHTML = regionData.map(region => `
+                <div onclick="selectRegion('${region.id}')" class="${colorMappings[region.color]?.bg || 'bg-gray-50 border-gray-200'} rounded-xl p-4 border cursor-pointer hover:shadow-lg transition-all">
+                    <i class="fas ${region.icon} ${colorMappings[region.color]?.text || 'text-gray-500'} text-xl mb-2"></i>
+                    <h4 class="font-semibold text-gray-800">${region.name}</h4>
+                    <p class="text-xs text-gray-500">${region.countries} countries</p>
+                    <div class="mt-2 flex items-center gap-2">
+                        <div class="flex-1 h-1.5 bg-gray-200 rounded-full"><div class="h-full ${region.riskScore > 60 ? 'bg-red-500' : 'bg-green-500'} rounded-full" style="width:${region.riskScore}%"></div></div>
+                        <span class="text-xs font-bold">${region.riskScore}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderCountryTable(filter = {}) {
+            const container = document.getElementById('country-table-body');
+            let filtered = [...countryRiskData];
+            if (filter.region && filter.region !== 'all') filtered = filtered.filter(c => c.region === filter.region);
+            if (filter.riskLevel && filter.riskLevel !== 'all') {
+                if (filter.riskLevel === 'critical') filtered = filtered.filter(c => c.riskLevel === 'critical');
+                else if (filter.riskLevel === 'high') filtered = filtered.filter(c => ['critical', 'high'].includes(c.riskLevel));
+                else if (filter.riskLevel === 'medium') filtered = filtered.filter(c => ['critical', 'high', 'medium'].includes(c.riskLevel));
+            }
+            if (filter.search) filtered = filtered.filter(c => c.country.toLowerCase().includes(filter.search.toLowerCase()));
+            filtered.sort((a, b) => b.riskScore - a.riskScore);
+
+            container.innerHTML = filtered.map(country => `
+                <tr class="border-t country-row cursor-pointer ${country.code === 'SG' ? 'bg-red-50' : ''}" onclick="selectCountryFromMap('${country.code}')">
+                    <td class="px-4 py-3"><span class="text-lg mr-2">${getFlagEmoji(country.code)}</span><span class="font-medium ${country.code === 'SG' ? 'text-red-600' : ''}">${country.country}</span></td>
+                    <td class="px-4 py-3 text-gray-600">${getRegionName(country.region)}</td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded-full text-xs font-medium ${country.riskLevel === 'critical' ? 'bg-red-100 text-red-800' : country.riskLevel === 'high' ? 'bg-orange-100 text-orange-800' : country.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${country.riskLevel.toUpperCase()}</span></td>
+                    <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-16 h-2 bg-gray-200 rounded-full"><div class="h-full ${country.riskScore > 75 ? 'bg-red-500' : country.riskScore > 50 ? 'bg-orange-500' : 'bg-green-500'} rounded-full" style="width:${country.riskScore}%"></div></div><span class="text-sm font-bold">${country.riskScore}</span></div></td>
+                    <td class="px-4 py-3 text-center font-medium">${country.flags}</td>
+                    <td class="px-4 py-3 text-center">${country.trend === 'up' ? '<i class="fas fa-arrow-up text-red-500"></i>' : country.trend === 'down' ? '<i class="fas fa-arrow-down text-green-500"></i>' : '<i class="fas fa-minus text-gray-400"></i>'}</td>
+                    <td class="px-4 py-3"><div class="flex flex-wrap gap-1">${country.concerns.slice(0,2).map(c => `<span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">${c}</span>`).join('')}</div></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderSanctionedCountries() {
+            const container = document.getElementById('sanctioned-countries');
+            container.innerHTML = sanctionedCountries.map(c => `
+                <div class="flex items-center justify-between bg-red-100 rounded-lg px-3 py-2">
+                    <span class="font-medium text-red-800">${getFlagEmoji(c.code)} ${c.name}</span>
+                    <span class="text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded">${c.type}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderWatchlistCountries() {
+            const container = document.getElementById('watchlist-countries');
+            container.innerHTML = watchlistCountries.map(c => `
+                <div class="flex items-center justify-between bg-orange-100 rounded-lg px-3 py-2">
+                    <span class="font-medium text-orange-800">${c.name}</span>
+                    <span class="text-xs bg-orange-200 text-orange-800 px-2 py-0.5 rounded">${c.reason}</span>
+                </div>
+            `).join('');
+        }
+
+        function setupCountryFilters() {
+            const regionFilter = document.getElementById('region-filter');
+            const riskFilter = document.getElementById('risk-level-filter');
+            const searchInput = document.getElementById('country-search');
+            const applyFilters = () => renderCountryTable({ region: regionFilter.value, riskLevel: riskFilter.value, search: searchInput.value });
+            regionFilter.addEventListener('change', applyFilters);
+            riskFilter.addEventListener('change', applyFilters);
+            searchInput.addEventListener('input', applyFilters);
+        }
+
+        function getFlagEmoji(code) {
+            const codePoints = code.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
+            return String.fromCodePoint(...codePoints);
+        }
+
+        function getRegionName(regionId) {
+            const region = regionData.find(r => r.id === regionId);
+            return region ? region.name : regionId;
+        }
+
+        function selectCategory(categoryId) {
+            selectedCategory = categoryId;
+            switchTab('redflags');
+            renderCategoryFilters();
+            renderRedFlagsGrid(categoryId);
+        }
+
+        function filterCategory(categoryId) {
+            selectedCategory = categoryId;
+            renderCategoryFilters();
+            renderRedFlagsGrid(categoryId);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
